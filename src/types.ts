@@ -96,7 +96,7 @@ export interface OrderItem {
 
 export interface ModuleMaster {
   id: string;
-  module_name: string;
+  name: string;
   description?: string;
   icon?: string;
   price?: number;

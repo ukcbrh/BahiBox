@@ -14,6 +14,7 @@ import Checkout from './pages/Checkout';
 import SuperAdmin from './pages/SuperAdmin';
 import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/public" element={<PublicApp />} />
             <Route path="/superadmin" element={<SuperAdmin />} />
           </Routes>
+          <PWAInstallPrompt />
         </BrowserRouter>
       </AuthProvider>
     </TenantProvider>

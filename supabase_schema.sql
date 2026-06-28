@@ -141,3 +141,6 @@ CREATE TABLE IF NOT EXISTS public.merchant_branding (
 ALTER TABLE public.merchant_branding ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Enable read for all" ON public.merchant_branding FOR SELECT USING (true);
 CREATE POLICY "Enable all for authenticated users" ON public.merchant_branding FOR ALL TO authenticated USING (true);
+
+-- Schema Patch for modules_master description
+ALTER TABLE public.modules_master ADD COLUMN IF NOT EXISTS description TEXT;

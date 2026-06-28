@@ -20,26 +20,26 @@ export function useModules(merchantId?: string) {
         }
 
         const fallbackModules = [
-          { id: 'retail', module_name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
-          { id: 'manufacturing', module_name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
-          { id: 'education', module_name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
-          { id: 'healthcare', module_name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
-          { id: 'hospitality', module_name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
-          { id: 'transport', module_name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
-          { id: 'services', module_name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
-          { id: 'agriculture', module_name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
+          { id: 'retail', name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
+          { id: 'manufacturing', name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
+          { id: 'education', name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
+          { id: 'healthcare', name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
+          { id: 'hospitality', name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
+          { id: 'transport', name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
+          { id: 'services', name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
+          { id: 'agriculture', name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
         ];
 
         let loadedModules = fallbackModules;
         
         // Fetch modules
-        const { data: mods, error: modsError } = await supabase.from('modules_master').select('*').order('module_name');
+        const { data: mods, error: modsError } = await supabase.from('modules_master').select('*').order('name');
         
         if (mods && mods.length > 0) {
           if (mods.length < 8) {
             const existingIds = new Set(mods.map(m => m.id));
             const missingModules = fallbackModules.filter(m => !existingIds.has(m.id));
-            loadedModules = [...mods, ...missingModules].sort((a, b) => (a.module_name || '').localeCompare(b.module_name || ''));
+            loadedModules = [...mods, ...missingModules].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
           } else {
             loadedModules = mods;
           }
@@ -69,5 +69,15 @@ export function useModules(merchantId?: string) {
     return () => { isMounted = false; };
   }, [merchantId]);
 
-  return { modules, subscriptions, loading, error };
+  const refreshSubscriptions = async () => {
+    if (!merchantId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data: subs } = await supabase.from('merchant_subscriptions').select('*').eq('merchant_id', merchantId);
+    if (subs) {
+      setSubscriptions(subs);
+    }
+  };
+
+  return { modules, subscriptions, loading, error, refreshSubscriptions };
 }

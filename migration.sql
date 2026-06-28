@@ -147,3 +147,6 @@ CREATE POLICY "Enable all for authenticated users" ON public.merchant_subscripti
 
 -- Notify PostgREST to reload schema cache
 NOTIFY pgrst, 'reload schema';
+
+-- Schema Patch for modules_master description
+ALTER TABLE public.modules_master ADD COLUMN IF NOT EXISTS description TEXT;

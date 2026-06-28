@@ -45,7 +45,8 @@ import {
   Map,
   Calendar,
   Sprout,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
@@ -83,7 +84,7 @@ export default function MerchantDashboard() {
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   
   const [activeModuleState, setActiveModuleState] = useState<ModuleType>(initialModule as ModuleType);
-  const { modules: moduleMaster, subscriptions: merchantSubscriptions, loading: modulesLoading } = useModules(user?.id);
+  const { modules: moduleMaster, subscriptions: merchantSubscriptions, loading: modulesLoading, refreshSubscriptions } = useModules(user?.id);
   const [isModuleMenuOpen, setIsModuleMenuOpen] = useState(false);
 
   const [isDataInitialized, setIsDataInitialized] = useState(false);
@@ -94,16 +95,93 @@ export default function MerchantDashboard() {
   const [paymentModule, setPaymentModule] = useState(location.state?.module || initialModule);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [selectedModuleToActivate, setSelectedModuleToActivate] = useState<ModuleMaster | null>(null);
+  const [isActivating, setIsActivating] = useState(false);
+  const [merchantDetails, setMerchantDetails] = useState<any>(null);
+
+  useEffect(() => {
+    if (showActivationModal && user) {
+       const fetchMerchantDetails = async () => {
+          const supabase = getSupabaseClient();
+          if (!supabase) return;
+          const { data } = await supabase.from('merchants').select('*').eq('id', user.id).single();
+          if (data) {
+             setMerchantDetails(data);
+          } else {
+             // Fallback to user if merchant not found
+             const { data: userData } = await supabase.from('users').select('*').eq('id', user.id).single();
+             if (userData) {
+                setMerchantDetails({
+                   name: userData.name,
+                   email: userData.email,
+                   phone: userData.phone,
+                   business_name: userData.business_name || '',
+                   address: userData.address || ''
+                });
+             }
+          }
+       };
+       fetchMerchantDetails();
+    }
+  }, [showActivationModal, user]);
+
   const handlePaymentSuccess = async () => {
     setIsProcessingPayment(true);
     const supabase = getSupabaseClient();
     if (supabase && user) {
-       await supabase.from('merchant_subscriptions').update({ plan_type: paymentPlan }).eq('merchant_id', user.id).eq('module_id', paymentModule);
+       await supabase.from('merchant_subscriptions').upsert({ 
+         merchant_id: user.id, 
+         module_id: paymentModule,
+         plan_type: paymentPlan,
+         status: 'Active'
+       }, { onConflict: 'merchant_id, module_id' });
     }
     alert('Payment successful! Your plan has been upgraded.');
     setShowPaymentModal(false);
     setIsProcessingPayment(false);
-    window.location.reload();
+    
+    // Switch to the newly activated module
+    const activatedModule = moduleMaster.find(m => m.id === paymentModule);
+    if (activatedModule) {
+       setActiveModuleState(activatedModule.name as ModuleType);
+       setActiveTab(activatedModule.name === 'Retail POS' ? 'pos' : 'dashboard');
+    }
+    
+    // Refresh subscriptions
+    if (refreshSubscriptions) {
+       await refreshSubscriptions();
+    }
+  };
+
+  const handleActivateFreePlan = async (mod: ModuleMaster) => {
+    setIsActivating(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase && user) {
+        await supabase.from('merchant_subscriptions').upsert({
+          merchant_id: user.id,
+          module_id: mod.id,
+          plan_type: 'Free',
+          status: 'Active'
+        }, { onConflict: 'merchant_id, module_id' });
+      }
+      alert('Module Activated Successfully!');
+      setShowActivationModal(false);
+      
+      // Switch to the newly activated module
+      setActiveModuleState(mod.name as ModuleType);
+      setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
+      
+      // Refresh subscriptions
+      if (refreshSubscriptions) {
+         await refreshSubscriptions();
+      }
+    } catch (e) {
+      alert('Error activating module.');
+    } finally {
+      setIsActivating(false);
+    }
   };
 
   useEffect(() => {
@@ -176,62 +254,57 @@ export default function MerchantDashboard() {
     switch (activeModuleState as string) {
       case 'Education':
         return [
-          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'students', label: 'Student Admissions', icon: Users },
-          { id: 'fees', label: 'Fee Counters', icon: Banknote },
-          { id: 'syllabus', label: 'Syllabus Tracker', icon: FileText },
-          { id: 'transport', label: 'Live Bus Tracking', icon: Truck },
+          { id: 'admin', label: 'Admin', icon: Users },
+          { id: 'academics', label: 'Academics', icon: FileText },
+          { id: 'support', label: 'Support', icon: Truck },
+          { id: 'automations', label: 'Automations', icon: CheckCircle2 },
         ];
       case 'Healthcare':
         return [
-          { id: 'dashboard', label: 'Hospital Dashboard', icon: LayoutDashboard },
-          { id: 'opd', label: 'OPD & Appointments', icon: Users },
-          { id: 'beds', label: 'Bed Management', icon: Bed },
-          { id: 'pharmacy', label: 'Pharmacy POS', icon: Pill },
+          { id: 'front-desk', label: 'Front Desk', icon: Users },
+          { id: 'emergency', label: 'Emergency & Ward', icon: Bed },
+          { id: 'pharmacy', label: 'Pharmacy & Labs', icon: Pill },
+          { id: 'accounts', label: 'Accounts', icon: Calculator },
         ];
       case 'Manufacturing':
         return [
-          { id: 'dashboard', label: 'Factory Dashboard', icon: LayoutDashboard },
-          { id: 'production', label: 'Production Units', icon: Factory },
-          { id: 'inventory', label: 'Raw Materials', icon: Package },
-          { id: 'dispatch', label: 'Dispatch', icon: Truck },
+          { id: 'dashboard', label: 'Role Dashboards', icon: LayoutDashboard },
+          { id: 'production', label: 'Production Flow', icon: Factory },
+          { id: 'hr', label: 'HR/Payroll', icon: Users },
+          { id: 'sales', label: 'Dynamic Sales', icon: Banknote },
         ];
       case 'Hospitality':
         return [
-          { id: 'dashboard', label: 'Hotel Dashboard', icon: LayoutDashboard },
-          { id: 'booking', label: 'Room Bookings', icon: Bed },
-          { id: 'restaurant', label: 'Restaurant POS', icon: Utensils },
-          { id: 'housekeeping', label: 'Housekeeping', icon: Clipboard },
+          { id: 'front-desk', label: 'Front Desk', icon: Bed },
+          { id: 'restaurant', label: 'Restaurant', icon: Utensils },
+          { id: 'kitchen', label: 'Kitchen (KDS)', icon: Clipboard },
+          { id: 'cloud-kitchen', label: 'Cloud Kitchen', icon: Cloud },
         ];
       case 'Transport':
         return [
-          { id: 'dashboard', label: 'Fleet Dashboard', icon: LayoutDashboard },
-          { id: 'vehicles', label: 'Vehicles', icon: Truck },
-          { id: 'drivers', label: 'Drivers', icon: Users },
-          { id: 'trips', label: 'Trip Management', icon: Map },
+          { id: 'master', label: 'Master Settings', icon: Settings },
+          { id: 'b2b', label: 'B2B & B2C', icon: Truck },
+          { id: 'finance', label: 'Finance', icon: Wallet },
         ];
       case 'Services':
         return [
-          { id: 'dashboard', label: 'Services Dashboard', icon: LayoutDashboard },
-          { id: 'bookings', label: 'Bookings', icon: Calendar },
-          { id: 'staff', label: 'Staff Management', icon: Users },
-          { id: 'invoices', label: 'Invoices', icon: FileText },
+          { id: 'categories', label: 'Categories', icon: FolderPlus },
+          { id: 'invoicing', label: 'Invoicing', icon: FileText },
         ];
       case 'Agriculture':
         return [
-          { id: 'dashboard', label: 'Farm Dashboard', icon: LayoutDashboard },
-          { id: 'crops', label: 'Crop Management', icon: Sprout },
-          { id: 'inventory', label: 'Inventory', icon: Package },
-          { id: 'sales', label: 'Produce Sales', icon: Banknote },
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'farm', label: 'Farm & Inventory', icon: Sprout },
+          { id: 'finance', label: 'Finance', icon: Wallet },
         ];
       case 'Retail POS':
       default:
         return [
-          { id: 'pos', label: 'Hybrid POS', icon: ShoppingCart },
-          { id: 'inventory', label: 'Master & Inventory', icon: Package },
+          { id: 'pos', label: 'In-Store POS', icon: ShoppingCart },
+          { id: 'online', label: 'Online Order Desk', icon: Package },
+          { id: 'inventory', label: 'Retail Inventory', icon: Package },
           { id: 'gst', label: 'GST & Tax', icon: Calculator },
-          { id: 'ledger', label: 'Purchase & Ledger', icon: Wallet },
-          { id: 'crm', label: 'CRM & Payroll', icon: Users },
+          { id: 'security', label: 'Security', icon: ScanLine },
         ];
     }
   };
@@ -247,7 +320,7 @@ export default function MerchantDashboard() {
     }
   };
 
-  const activeModule = moduleMaster.find(m => m.module_name === activeModuleState);
+  const activeModule = moduleMaster.find(m => m.name === activeModuleState);
   const activeSubscription = activeModule ? merchantSubscriptions.find(s => s.module_id === activeModule.id && s.status === 'Active') : null;
   
   let daysUntilExpiry: number | null = null;
@@ -325,32 +398,41 @@ export default function MerchantDashboard() {
               ))}
 
               <div className="mt-6 mb-2">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">Your Subscriptions</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">All Modules</p>
                 <div className="space-y-1">
                   {moduleMaster.map((mod) => {
                     const sub = merchantSubscriptions.find(s => s.module_id === mod.id);
                     const isSubscribed = sub && sub.status === 'Active';
-                    if (!isSubscribed) return null;
                     
-                    const isActive = activeModuleState === mod.module_name;
+                    const isActive = activeModuleState === mod.name;
                     return (
                       <button
                         key={mod.id}
                         onClick={() => {
-                          setActiveModuleState(mod.module_name as ModuleType);
-                          setActiveTab(mod.module_name === 'Retail POS' ? 'pos' : 'dashboard');
-                          setIsMenuOpen(false);
+                          if (isSubscribed) {
+                            setActiveModuleState(mod.name as ModuleType);
+                            setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
+                            setIsMenuOpen(false);
+                          } else {
+                            setIsMenuOpen(false);
+                            setSelectedModuleToActivate(mod);
+                            setShowActivationModal(true);
+                          }
                         }}
-                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                        className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                           isActive
                             ? 'bg-slate-100 text-slate-900'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            : !isSubscribed
+                              ? 'text-slate-400 hover:bg-slate-50'
+                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         }`}
                       >
-                        <div className="w-6 flex justify-center">
-                          {isActive && <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} />}
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 flex justify-center">
+                            {isActive ? <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} /> : (!isSubscribed && <Lock size={14} className="text-slate-300" />)}
+                          </div>
+                          <span className={!isSubscribed ? 'line-through opacity-70' : ''}>{mod.name}</span>
                         </div>
-                        {mod.module_name}
                       </button>
                     );
                   })}
@@ -410,7 +492,7 @@ export default function MerchantDashboard() {
                   {moduleMaster.map(mod => {
                     const sub = merchantSubscriptions.find(s => s.module_id === mod.id);
                     const isSubscribed = sub && sub.status === 'Active';
-                    const isActive = activeModuleState === mod.module_name;
+                    const isActive = activeModuleState === mod.name;
 
                     return (
                       <div key={mod.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50 text-slate-700'} ${!isSubscribed ? 'opacity-70 grayscale' : ''}`}>
@@ -418,20 +500,24 @@ export default function MerchantDashboard() {
                           disabled={!isSubscribed}
                           onClick={() => {
                             if (isSubscribed) {
-                              setActiveModuleState(mod.module_name as ModuleType);
-                              setActiveTab(mod.module_name === 'Retail POS' ? 'pos' : 'dashboard');
+                              setActiveModuleState(mod.name as ModuleType);
+                              setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
                               setIsModuleMenuOpen(false);
                             }
                           }}
                           className="flex-1 text-left font-medium disabled:cursor-not-allowed flex items-center"
                           style={isActive && tenant ? { color: tenant.primary_color } : {}}
                         >
-                          {mod.module_name}
+                          {mod.name}
                           {isActive && <CheckCircle size={14} className={`ml-2 ${tenant ? "" : "text-primary"}`} style={tenant ? { color: tenant.primary_color } : {}} />}
                         </button>
                         {!isSubscribed && (
                           <button 
-                            onClick={() => navigate(`/checkout?module=${encodeURIComponent(mod.id)}&plan=Pro`)}
+                            onClick={() => {
+                               setIsModuleMenuOpen(false);
+                               setSelectedModuleToActivate(mod);
+                               setShowActivationModal(true);
+                            }}
                             className="ml-2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full hover:bg-primary/90 transition-colors shrink-0"
                           >
                             Activate
@@ -511,6 +597,135 @@ export default function MerchantDashboard() {
         </div>
       </main>
 
+      {/* Module Activation Modal */}
+      {showActivationModal && selectedModuleToActivate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 flex flex-col md:flex-row">
+             {/* Left Column: Pricing Tiers */}
+             <div className="flex-1 p-8 border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50">
+                <div className="flex justify-between items-start mb-6">
+                   <div>
+                      <h2 className="text-2xl font-bold text-slate-900 mb-1">Activate {selectedModuleToActivate.name}</h2>
+                      <p className="text-slate-500 text-sm">Choose a plan to unlock this module.</p>
+                   </div>
+                   <button onClick={() => setShowActivationModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full md:hidden">
+                      <X size={20} />
+                   </button>
+                </div>
+                
+                <div className="space-y-4">
+                   {/* Free Tier */}
+                   <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-primary/50 transition-colors cursor-pointer relative overflow-hidden group">
+                      {selectedModuleToActivate.test_mode_free && (
+                         <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-bl-lg">TEST MODE</div>
+                      )}
+                      <div className="flex justify-between items-center mb-2">
+                         <h3 className="font-bold text-lg text-slate-900">Free Plan</h3>
+                         <span className="text-xl font-black text-slate-900">₹{selectedModuleToActivate.test_mode_free ? '1' : '0'}</span>
+                      </div>
+                      <p className="text-sm text-slate-500 mb-4">Basic features to get you started.</p>
+                      <button 
+                         onClick={() => handleActivateFreePlan(selectedModuleToActivate)}
+                         disabled={isActivating}
+                         className="w-full py-2.5 rounded-lg border-2 border-slate-200 text-slate-700 font-bold hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                      >
+                         {isActivating ? 'Activating...' : 'Activate Free Plan'}
+                      </button>
+                   </div>
+
+                   {/* Pro Tier */}
+                   <div className="bg-white border-2 border-primary rounded-xl p-5 relative overflow-hidden shadow-sm">
+                      <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg uppercase tracking-wider">Recommended</div>
+                      <div className="flex justify-between items-center mb-2 mt-1">
+                         <h3 className="font-bold text-lg text-primary">Pro Plan</h3>
+                         <span className="text-xl font-black text-primary">₹{selectedModuleToActivate.test_mode_pro ? '1' : selectedModuleToActivate.price || 999}<span className="text-sm text-slate-500 font-normal">/mo</span></span>
+                      </div>
+                      <p className="text-sm text-slate-500 mb-4">Advanced features for growing businesses.</p>
+                      <button 
+                         onClick={() => {
+                            setPaymentModule(selectedModuleToActivate.id);
+                            setPaymentPlan('Pro');
+                            const price = selectedModuleToActivate.test_mode_pro ? 1 : Number(selectedModuleToActivate.price || 999);
+                            setPaymentAmount(price * 1.18); // Including GST
+                            setShowActivationModal(false);
+                            setShowPaymentModal(true);
+                         }}
+                         className="w-full py-2.5 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"
+                      >
+                         Upgrade to Pro
+                      </button>
+                   </div>
+
+                   {/* Custom Tier */}
+                   <div className="bg-white border border-slate-200 rounded-xl p-5 hover:border-primary/50 transition-colors cursor-pointer relative overflow-hidden group">
+                      {selectedModuleToActivate.test_mode_custom && (
+                         <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-bl-lg">TEST MODE</div>
+                      )}
+                      <div className="flex justify-between items-center mb-2">
+                         <h3 className="font-bold text-lg text-slate-900">Custom</h3>
+                         <span className="text-xl font-black text-slate-900">Contact Us</span>
+                      </div>
+                      <p className="text-sm text-slate-500 mb-4">Enterprise-grade solutions tailored for you.</p>
+                      <button 
+                         onClick={() => {
+                            if (selectedModuleToActivate.test_mode_custom) {
+                               setPaymentModule(selectedModuleToActivate.id);
+                               setPaymentPlan('Custom');
+                               setPaymentAmount(1 * 1.18); // Including GST
+                               setShowActivationModal(false);
+                               setShowPaymentModal(true);
+                            } else {
+                               alert('Please contact sales for custom pricing.');
+                            }
+                         }}
+                         className="w-full py-2.5 rounded-lg border-2 border-slate-200 text-slate-700 font-bold hover:border-primary hover:text-primary transition-colors"
+                      >
+                         {selectedModuleToActivate.test_mode_custom ? 'Test Custom Plan' : 'Contact Sales'}
+                      </button>
+                   </div>
+                </div>
+             </div>
+             
+             {/* Right Column: Billing Summary */}
+             <div className="w-full md:w-96 p-8 bg-white relative">
+                <button onClick={() => setShowActivationModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full hidden md:block transition-colors">
+                   <X size={20} />
+                </button>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                   <CheckCircle2 className="text-emerald-500" size={20} />
+                   Billing Details
+                </h3>
+                
+                <div className="space-y-4">
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Full Name</label>
+                      <Input value={merchantDetails?.name || user?.name || ''} disabled className="bg-slate-50 border-slate-200 text-slate-700" />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Email Address</label>
+                      <Input value={merchantDetails?.email || user?.email || ''} disabled className="bg-slate-50 border-slate-200 text-slate-700" />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Phone Number</label>
+                      <Input value={merchantDetails?.phone || ''} disabled className="bg-slate-50 border-slate-200 text-slate-700" />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Business Name</label>
+                      <Input value={merchantDetails?.business_name || ''} disabled className="bg-slate-50 border-slate-200 text-slate-700" />
+                   </div>
+                   <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Address</label>
+                      <Input value={merchantDetails?.address || ''} disabled className="bg-slate-50 border-slate-200 text-slate-700" />
+                   </div>
+                </div>
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                   <p className="text-xs text-slate-400 text-center">These details are auto-fetched from your account profile for a seamless checkout experience.</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment Gateway Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -520,7 +735,7 @@ export default function MerchantDashboard() {
                    <CheckCircle size={32} />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900">Complete Payment</h3>
-                <p className="text-slate-500 mt-2">You are upgrading {paymentModule} to {paymentPlan} plan.</p>
+                <p className="text-slate-500 mt-2">You are upgrading {moduleMaster.find(m => m.id === paymentModule)?.name || paymentModule} to {paymentPlan} plan.</p>
              </div>
 
              <div className="bg-slate-50 p-4 rounded-xl mb-6">
@@ -1375,6 +1590,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
   const [showSettings, setShowSettings] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>({
     'Product Name': true,
+    'Unit': true,
     'Purchase Price': true,
     'CESS %': true,
     'Opening Stock': true,
@@ -1426,6 +1642,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
   const [newPurchasePrice, setNewPurchasePrice] = useState<number>(0);
   const [newCess, setNewCess] = useState<number>(0);
   const [newStock, setNewStock] = useState<number>(0);
+  const [newUnit, setNewUnit] = useState<string>('');
   const [newBarcode, setNewBarcode] = useState('');
   const [newMrp, setNewMrp] = useState<number>(0);
   const [newPrice, setNewPrice] = useState<number>(0); // Retail Sale Price
@@ -1467,6 +1684,16 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
 
   const [showAddCatModal, setShowAddCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+
+  const handleDeleteCategory = (catName: string) => {
+    // Child-Before-Parent Protection Rule
+    const hasChildren = products.some(p => p.category === catName);
+    if (hasChildren) {
+      alert("First delete all items/products/resumes inside this list.");
+      return;
+    }
+    setAvailableCategories(prev => prev.filter(c => c !== catName));
+  };
   const [showAddSubcatModal, setShowAddSubcatModal] = useState(false);
   const [newSubcatParent, setNewSubcatParent] = useState('');
   const [newSubcatName, setNewSubcatName] = useState('');
@@ -1540,6 +1767,11 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
       return;
     }
 
+    if (!newUnit) {
+      alert("Unit is mandatory. Please select a unit (e.g., Kg, Ltr, Pcs).");
+      return;
+    }
+
     const newId = 'P-' + Math.floor(100 + Math.random() * 900);
     const barcodeVal = newBarcode || String(Math.floor(8900000000000 + Math.random() * 99999999999));
 
@@ -1580,7 +1812,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
       mrp: newMrp || 0,
       cess: newCess || 0,
       stock: newStock || 0,
-      unit: 'Piece',
+      unit: newUnit || 'Piece',
       barcode: barcodeVal,
       merchant_id: tenant?.merchant_id
     };
@@ -1593,6 +1825,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
     setNewPrice(0);
     setNewPurchasePrice(0);
     setNewStock(0);
+    setNewUnit('');
     setNewBarcode('');
     setNewMrp(0);
     setNewCess(0);
@@ -1662,25 +1895,44 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-full mx-auto relative">
-      {/* Add Category Modal */}
+      {/* Add/Manage Category Modal */}
       {showAddCatModal && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Add Category</h3>
-            <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Manage Categories</h3>
+              <button onClick={() => setShowAddCatModal(false)}><X size={20} className="text-slate-400" /></button>
+            </div>
+            
+            <div className="mb-6 max-h-48 overflow-y-auto space-y-2 border border-slate-100 p-2 rounded-lg bg-slate-50">
+              {availableCategories.map(cat => (
+                <div key={cat} className="flex justify-between items-center bg-white p-2 rounded-md shadow-sm border border-slate-200">
+                  <span className="text-sm font-semibold">{cat}</span>
+                  <button 
+                    onClick={() => handleDeleteCategory(cat)}
+                    className="p-1 text-slate-400 hover:text-red-500 rounded transition-colors"
+                    title="Delete Category"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              {availableCategories.length === 0 && <p className="text-xs text-slate-400 text-center py-2">No categories.</p>}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Category Name</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">New Category Name</label>
                 <Input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Enter category name..." />
               </div>
               <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => setShowAddCatModal(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setShowAddCatModal(false)}>Close</Button>
                 <Button onClick={() => {
                   if (newCatName && !availableCategories.includes(newCatName)) {
                     setAvailableCategories(prev => [...prev, newCatName]);
-                    setShowAddCatModal(false);
                     setNewCatName('');
                   }
-                }}>Save</Button>
+                }}>Add Category</Button>
               </div>
             </div>
           </div>
@@ -1806,7 +2058,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
         <div className="flex flex-wrap items-stretch justify-end gap-2 xl:min-w-[450px]">
           <div className="grid grid-cols-2 gap-2 flex-1">
              <Button variant="outline" onClick={handleAddCategory} className="h-full bg-green-50 hover:bg-green-100 border-green-200 text-green-700 text-xs font-bold justify-start">
-               <FolderPlus size={16} className="mr-2 text-green-500" /> Add Category
+               <FolderPlus size={16} className="mr-2 text-green-500" /> Manage Categories
              </Button>
              <Button variant="outline" onClick={handleAddSubcategory} className="h-full bg-green-50 hover:bg-green-100 border-green-200 text-green-700 text-xs font-bold justify-start">
                <Tags size={16} className="mr-2 text-green-500" /> Add Subcategory
@@ -1833,6 +2085,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
               <tr>
                 <th className="px-3 py-2 w-20">P-Code</th>
                 {selectedColumns['Product Name'] && <th className="px-3 py-2 min-w-[200px] text-red-600 bg-red-100/50 text-center">Product Name</th>}
+                {selectedColumns['Unit'] && <th className="px-3 py-2 min-w-[100px] text-red-600 bg-red-100/50 text-center">Unit</th>}
                 {selectedColumns['Category'] && <th className="px-3 py-2 min-w-[120px]">Category</th>}
                 {selectedColumns['Subcategory'] && <th className="px-3 py-2 min-w-[120px]">Subcategory</th>}
                 {selectedColumns['WSalePrice'] && <th className="px-3 py-2 min-w-[100px]">WSalePrice</th>}
@@ -1883,6 +2136,7 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
                 <tr key={product.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-3 py-1.5 text-[11px] font-mono font-medium border-l-4 border-l-purple-600 bg-slate-50">{product.id}</td>
                   {selectedColumns['Product Name'] && <td className="px-3 py-1.5 text-xs font-semibold text-slate-900">{product.name}</td>}
+                  {selectedColumns['Unit'] && <td className="px-3 py-1.5 text-xs font-semibold text-slate-700">{product.unit || 'Piece'}</td>}
                   {selectedColumns['Category'] && <td className="px-3 py-1.5 text-xs font-semibold text-slate-700">{product.category}</td>}
                   {selectedColumns['Subcategory'] && <td className="px-3 py-1.5 text-xs font-semibold text-slate-700">{product.subcategory || '-'}</td>}
                   {selectedColumns['WSalePrice'] && <td className="px-3 py-1.5 text-xs font-mono text-slate-600 text-right">{product.wSalePrice?.toFixed(2) || '-'}</td>}
@@ -1967,6 +2221,17 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
                 </td>
                 {selectedColumns['Product Name'] && <td className="px-2 py-1 align-middle">
                   <Input ref={nameInputRef} placeholder="Type Name..." value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => handleKeyDown(e, purchasePriceInputRef)} className="h-7 text-xs bg-white border-amber-200 focus:border-amber-400 focus:ring-amber-400 rounded-sm" />
+                </td>}
+                {selectedColumns['Unit'] && <td className="px-2 py-1 align-middle">
+                  <select 
+                    value={newUnit} 
+                    onChange={e => setNewUnit(e.target.value)}
+                    className={`h-7 w-full text-xs bg-white border ${newUnit ? 'border-amber-200' : 'border-red-400'} focus:border-amber-400 rounded-sm outline-none px-1`}
+                    required
+                  >
+                    <option value="" disabled>Select Unit</option>
+                    {availableUnits.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
                 </td>}
                 {selectedColumns['Category'] && <td className="px-2 py-1 align-middle">
                   <Input placeholder="Category" value={newCategory} onChange={e => setNewCategory(e.target.value)} className="h-7 text-xs bg-white border-amber-200 focus:border-amber-400 rounded-sm" />

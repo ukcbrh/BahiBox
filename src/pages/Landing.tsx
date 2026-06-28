@@ -51,14 +51,14 @@ export default function Landing() {
   useEffect(() => {
     const fetchModules = async () => {
       const fallbackModules = [
-        { id: 'retail', module_name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
-        { id: 'manufacturing', module_name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
-        { id: 'education', module_name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
-        { id: 'healthcare', module_name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
-        { id: 'hospitality', module_name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
-        { id: 'transport', module_name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
-        { id: 'services', module_name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
-        { id: 'agriculture', module_name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
+        { id: 'retail', name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
+        { id: 'manufacturing', name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
+        { id: 'education', name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
+        { id: 'healthcare', name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
+        { id: 'hospitality', name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
+        { id: 'transport', name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
+        { id: 'services', name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
+        { id: 'agriculture', name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
       ];
 
       let loadedModules = fallbackModules;
@@ -66,7 +66,7 @@ export default function Landing() {
       try {
         const supabase = getSupabaseClient();
         if (supabase) {
-          const { data, error } = await supabase.from('modules_master').select('*').order('module_name');
+          const { data, error } = await supabase.from('modules_master').select('*').order('name');
           if (error && error.code !== 'PGRST205' && error.code !== '42P01') {
              console.warn("Error fetching modules_master:", error);
           }
@@ -74,7 +74,7 @@ export default function Landing() {
             if (data.length < 8) {
                const existingIds = new Set(data.map(m => m.id));
                const missingModules = fallbackModules.filter(m => !existingIds.has(m.id));
-               loadedModules = [...data, ...missingModules].sort((a, b) => (a.module_name || '').localeCompare(b.module_name || ''));
+               loadedModules = [...data, ...missingModules].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             } else {
                loadedModules = data;
             }
@@ -255,7 +255,7 @@ export default function Landing() {
                 </SelectTrigger>
                 <SelectContent>
                   {modulesList.map(mod => (
-                    <SelectItem key={mod.id} value={mod.id}>{mod.module_name || (mod as any).title}</SelectItem>
+                    <SelectItem key={mod.id} value={mod.id}>{mod.name || (mod as any).title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

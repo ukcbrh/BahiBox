@@ -125,17 +125,17 @@ export default function SuperAdmin() {
         }
 
         const fallbackModules = [
-          { id: 'retail', module_name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
-          { id: 'manufacturing', module_name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
-          { id: 'education', module_name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
-          { id: 'healthcare', module_name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
-          { id: 'hospitality', module_name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
-          { id: 'transport', module_name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
-          { id: 'services', module_name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
-          { id: 'agriculture', module_name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
+          { id: 'retail', name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
+          { id: 'manufacturing', name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
+          { id: 'education', name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
+          { id: 'healthcare', name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
+          { id: 'hospitality', name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
+          { id: 'transport', name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
+          { id: 'services', name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
+          { id: 'agriculture', name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
         ];
 
-        const { data: modulesData, error: modulesError } = await supabase.from('modules_master').select('*').order('module_name');
+        const { data: modulesData, error: modulesError } = await supabase.from('modules_master').select('*').order('name');
         
         let loadedModules = fallbackModules;
         
@@ -147,7 +147,7 @@ export default function SuperAdmin() {
             if (missingModules.length > 0) {
               try {
                 await supabase.from('modules_master').upsert(missingModules);
-                const { data: refreshedModules } = await supabase.from('modules_master').select('*').order('module_name');
+                const { data: refreshedModules } = await supabase.from('modules_master').select('*').order('name');
                 if (refreshedModules) {
                   loadedModules = refreshedModules;
                 }
@@ -548,7 +548,7 @@ export default function SuperAdmin() {
                       </SelectTrigger>
                       <SelectContent>
                         {modulesMaster.map(mod => (
-                           <SelectItem key={mod.id} value={mod.id}>{mod.module_name}</SelectItem>
+                           <SelectItem key={mod.id} value={mod.id}>{mod.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -581,7 +581,7 @@ export default function SuperAdmin() {
 
                 <Card className="lg:col-span-2 dark:bg-slate-900 dark:border-slate-800">
                   <CardHeader className="flex flex-row items-center justify-between border-b dark:border-slate-800 pb-4">
-                    <CardTitle className="dark:text-white">Editing Plans for: {modulesMaster.find(m => m.id === selectedModule)?.module_name}</CardTitle>
+                    <CardTitle className="dark:text-white">Editing Plans for: {modulesMaster.find(m => m.id === selectedModule)?.name}</CardTitle>
                     <Button onClick={handleUpdatePricing} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">
                       Update Live Pricing
                     </Button>
@@ -1006,7 +1006,7 @@ export default function SuperAdmin() {
                   return (
                     <div key={module.id} className="flex items-center justify-between p-4 border dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
                       <div>
-                        <h4 className="font-semibold text-slate-900 dark:text-white">{module.module_name}</h4>
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{module.name}</h4>
                         <p className="text-sm text-slate-500">{module.description}</p>
                       </div>
                       <div className="flex items-center gap-4">

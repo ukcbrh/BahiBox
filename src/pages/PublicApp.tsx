@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, ShoppingBag, Wallet, User as UserIcon, Search, Stethoscope, GraduationCap, Truck, ArrowLeft, Store, Package, Clock } from 'lucide-react';
+import { Home, ShoppingBag, Wallet, User as UserIcon, Search, Stethoscope, GraduationCap, Truck, ArrowLeft, Store, Package, Clock, Utensils, LayoutDashboard, Sprout, Settings, X } from 'lucide-react';
 import { Card, CardContent } from '@/src/components/ui/card';
 import { Input } from '@/src/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,8 +16,26 @@ export default function PublicApp() {
   const { user } = useAuth();
   const { tenant, resetTenant } = useTenant();
   
-  const userName = user?.displayName || 'Rahul Kumar';
-  const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2);
+  const userName = user?.displayName || user?.email?.split('@')[0] || 'Guest User';
+  const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  const [showAuthGuard, setShowAuthGuard] = useState(false);
+  const [authFormData, setAuthFormData] = useState({ name: '', email: '', password: '', phone: '', address: '' });
+
+  const handleGuardedAction = () => {
+    if (!user) {
+      setShowAuthGuard(true);
+      return false;
+    }
+    return true;
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simulate auth success
+    alert('Signed up successfully!');
+    setShowAuthGuard(false);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -101,7 +119,17 @@ export default function PublicApp() {
                                <p className="font-bold text-sm" style={{ color: tenant.primary_color }}>₹{product.price}</p>
                                <span className="text-[10px] text-slate-400">{product.unit}</span>
                             </div>
-                            <Button className="w-full mt-2 h-8 text-xs font-bold rounded-lg transition-transform active:scale-95" style={{ backgroundColor: tenant.primary_color }}>Add</Button>
+                            <Button 
+                              onClick={() => {
+                                if (handleGuardedAction()) {
+                                  alert('Added to cart!');
+                                }
+                              }}
+                              className="w-full mt-2 h-8 text-xs font-bold rounded-lg transition-transform active:scale-95" 
+                              style={{ backgroundColor: tenant.primary_color }}
+                            >
+                              Add to Cart
+                            </Button>
                           </CardContent>
                         </Card>
                       ))}
@@ -129,55 +157,33 @@ export default function PublicApp() {
               <>
                 {/* Services Grid */}
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 mb-4 px-2">BahiBox Services</h2>
+                  <h2 className="text-lg font-bold text-slate-900 mb-4 px-2">BahiBox Super App</h2>
                   <div className="grid grid-cols-4 gap-y-4 gap-x-2">
-                    <ServiceIcon icon={ShoppingBag} label="Grocery" color="bg-blue-100 text-blue-600" />
-                    <ServiceIcon icon={Stethoscope} label="Doctors" color="bg-emerald-100 text-emerald-600" />
-                    <ServiceIcon icon={GraduationCap} label="School" color="bg-orange-100 text-orange-600" />
-                    <ServiceIcon icon={Truck} label="Transport" color="bg-yellow-100 text-yellow-600" />
-                    <ServiceIcon icon={Store} label="Services" color="bg-purple-100 text-purple-600" />
-                    <ServiceIcon icon={Store} label="Kisan" color="bg-green-100 text-green-600" />
-                    <ServiceIcon icon={Store} label="Jobs" color="bg-indigo-100 text-indigo-600" />
-                    <ServiceIcon icon={Store} label="Move" color="bg-red-100 text-red-600" />
+                    <ServiceIcon icon={ShoppingBag} label="Mart" color="bg-blue-100 text-blue-600" />
+                    <ServiceIcon icon={Utensils} label="Food" color="bg-orange-100 text-orange-600" />
+                    <ServiceIcon icon={Stethoscope} label="Care" color="bg-emerald-100 text-emerald-600" />
+                    <ServiceIcon icon={Truck} label="Move" color="bg-yellow-100 text-yellow-600" />
+                    <ServiceIcon icon={LayoutDashboard} label="Classified" color="bg-purple-100 text-purple-600" />
+                    <ServiceIcon icon={Sprout} label="Agri-Tech" color="bg-green-100 text-green-600" />
+                    <ServiceIcon icon={UserIcon} label="MyLife" color="bg-pink-100 text-pink-600" />
+                    <ServiceIcon icon={Settings} label="Utility" color="bg-slate-100 text-slate-600" />
                   </div>
                 </div>
 
-                {/* Featured Deals / Merchants */}
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 mb-4 px-2">Local Shops (Retail POS)</h2>
-                  <Card 
-                    className="mb-3 border-0 shadow-sm overflow-hidden rounded-2xl cursor-pointer"
-                    onClick={() => {
-                      // Simulate opening a tenant
-                      navigate('/public?tenant=sharmamart.com');
-                      window.location.reload(); // Quick hack to trigger the effect in this demo context
-                    }}
-                  >
-                    <div className="h-24 bg-blue-500 p-4 flex items-end">
-                      <h3 className="text-white font-bold text-lg">Sharma General Store</h3>
-                    </div>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-slate-500 mb-2">Groceries, Daily Needs • 1.2km</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Open Now</span>
-                        <span className="text-sm font-semibold text-primary">Order &rarr;</span>
+                {/* Job Portal Access */}
+                <div className="mt-4">
+                  <Card className="bg-gradient-to-r from-indigo-500 to-blue-600 border-0 rounded-2xl text-white cursor-pointer hover:opacity-90 transition-opacity">
+                    <CardContent className="p-5 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold mb-1">Jobs & Connect</h3>
+                        <p className="text-xs text-white/80">Smart CV Upload. Candidate identity protected.</p>
+                      </div>
+                      <div className="bg-white/20 p-2 rounded-xl">
+                        <UserIcon size={24} />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Job Portal Access */}
-                <Card className="bg-gradient-to-r from-primary to-blue-600 border-0 rounded-2xl text-white cursor-pointer hover:opacity-90 transition-opacity">
-                  <CardContent className="p-5 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold mb-1">Local Job Portal</h3>
-                      <p className="text-xs text-white/80">Upload CV & apply to merchants directly.</p>
-                    </div>
-                    <div className="bg-white/20 p-2 rounded-xl">
-                      <UserIcon size={24} />
-                    </div>
-                  </CardContent>
-                </Card>
               </>
             )
           )}
@@ -189,11 +195,32 @@ export default function PublicApp() {
         {/* Bottom Nav Bar */}
         <nav className="absolute bottom-0 w-full bg-white border-t border-slate-100 px-6 py-4 flex justify-between items-center rounded-b-[2rem]">
           <NavItem icon={Home} label="Home" active={activeTab === 'home'} onClick={() => setActiveTab('home')} tenantColor={tenant?.primary_color} />
-          <NavItem icon={ShoppingBag} label="Orders" active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} tenantColor={tenant?.primary_color} />
-          <NavItem icon={Wallet} label="Wallet" active={activeTab === 'wallet'} onClick={() => setActiveTab('wallet')} tenantColor={tenant?.primary_color} />
-          <NavItem icon={UserIcon} label="Profile" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} tenantColor={tenant?.primary_color} />
+          <NavItem icon={ShoppingBag} label="Orders" active={activeTab === 'orders'} onClick={() => { if (handleGuardedAction()) setActiveTab('orders'); }} tenantColor={tenant?.primary_color} />
+          <NavItem icon={Wallet} label="Wallet" active={activeTab === 'wallet'} onClick={() => { if (handleGuardedAction()) setActiveTab('wallet'); }} tenantColor={tenant?.primary_color} />
+          <NavItem icon={UserIcon} label="Profile" active={activeTab === 'profile'} onClick={() => { if (handleGuardedAction()) setActiveTab('profile'); }} tenantColor={tenant?.primary_color} />
         </nav>
       </div>
+
+      {showAuthGuard && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-900">Sign Up / Login</h3>
+              <button onClick={() => setShowAuthGuard(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <Input placeholder="Full Name" required value={authFormData.name} onChange={e => setAuthFormData({...authFormData, name: e.target.value})} />
+              <Input type="email" placeholder="Email Address" required value={authFormData.email} onChange={e => setAuthFormData({...authFormData, email: e.target.value})} />
+              <Input type="password" placeholder="Password" required value={authFormData.password} onChange={e => setAuthFormData({...authFormData, password: e.target.value})} />
+              <Input type="tel" placeholder="Mobile Number" required value={authFormData.phone} onChange={e => setAuthFormData({...authFormData, phone: e.target.value})} />
+              <Input placeholder="Delivery Address" required value={authFormData.address} onChange={e => setAuthFormData({...authFormData, address: e.target.value})} />
+              <Button type="submit" className="w-full h-12 text-lg font-bold">Continue Checkout</Button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
