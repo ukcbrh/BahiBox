@@ -13,21 +13,24 @@ import Pricing from './pages/Pricing';
 import Checkout from './pages/Checkout';
 import SuperAdmin from './pages/SuperAdmin';
 import { AuthProvider } from './contexts/AuthContext';
+import { TenantProvider } from './contexts/TenantContext';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/merchant" element={<MerchantDashboard />} />
-          <Route path="/public" element={<PublicApp />} />
-          <Route path="/superadmin" element={<SuperAdmin />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <TenantProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/merchant" element={<MerchantDashboard />} />
+            <Route path="/public" element={<PublicApp />} />
+            <Route path="/superadmin" element={<SuperAdmin />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </TenantProvider>
   );
 }

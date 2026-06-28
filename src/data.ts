@@ -2,7 +2,7 @@ import { ShoppingCart, Factory, GraduationCap, Stethoscope, Utensils, Truck, Wre
 
 export const modulesData = [
   { 
-    id: 'Retail POS', 
+    id: 'retail', 
     title: 'Retail & POS',
     description: 'Perfect retail machine with superfast billing, inventory unit management, and scan-and-go self-checkout.',
     icon: ShoppingCart, 
@@ -10,7 +10,7 @@ export const modulesData = [
     bg: 'bg-blue-50' 
   },
   { 
-    id: 'Manufacturing ERP', 
+    id: 'manufacturing', 
     title: 'Manufacturing ERP',
     description: 'End-to-end tracking from raw materials (BOM) to finished goods, labor management, and automatic stock inventory system.',
     icon: Factory, 
@@ -18,7 +18,7 @@ export const modulesData = [
     bg: 'bg-purple-50' 
   },
   { 
-    id: 'Education', 
+    id: 'education', 
     title: 'Education Management',
     description: 'Smart student admissions, dynamic syllabus tracker, live bus tracking, and transparent fee counters for parents.',
     icon: GraduationCap, 
@@ -26,7 +26,7 @@ export const modulesData = [
     bg: 'bg-orange-50' 
   },
   { 
-    id: 'Health Care', 
+    id: 'healthcare', 
     title: 'Healthcare & Hospital',
     description: 'Complete hospital management from OPD registration to pharmacy, lab reports, and live bed tracking.',
     icon: Stethoscope, 
@@ -34,7 +34,7 @@ export const modulesData = [
     bg: 'bg-emerald-50' 
   },
   { 
-    id: 'Hotel/Restaurant', 
+    id: 'hospitality', 
     title: 'Hotel & Restaurant (Hospitality)',
     description: 'Room booking, Kitchen Display System (KDS), smart self-ordering kiosks, and auto-consumption tracking.',
     icon: Utensils, 
@@ -42,7 +42,7 @@ export const modulesData = [
     bg: 'bg-red-50' 
   },
   { 
-    id: 'Transport Management', 
+    id: 'transport', 
     title: 'Transport & Logistics',
     description: 'Fleet tracking, driver wallet, part-load management, and precise trip expense calculation.',
     icon: Truck, 
@@ -50,7 +50,7 @@ export const modulesData = [
     bg: 'bg-yellow-50' 
   },
   { 
-    id: 'Daily Services', 
+    id: 'services', 
     title: 'Daily Services',
     description: 'Appointment and billing management for professionals like plumbers, mechanics, lawyers, or event planners.',
     icon: Wrench, 
@@ -58,7 +58,7 @@ export const modulesData = [
     bg: 'bg-cyan-50' 
   },
   { 
-    id: 'Agri Management', 
+    id: 'agriculture', 
     title: 'Agri Management (Agri-Tech)',
     description: 'Weather alerts for farmers, labor payments, smart crop calendars, and comprehensive KCC/AIF loan tracking.',
     icon: Sprout, 
@@ -77,42 +77,42 @@ export const publicAppFeature = {
 };
 
 export const pricingData: Record<string, { free: string[], pro: string[], custom: string[] }> = {
-  'Retail POS': {
+  'retail': {
     free: ['Single User Access', 'Basic Billing', 'Up to 50 Products', 'Standard Support'],
     pro: ['Unlimited Users', 'Advanced Inventory & Alerts', 'Customer Loyalty Program', 'Public App Listing'],
     custom: ['Multi-store Management', 'Custom Reporting', 'Dedicated Account Manager', 'SLA Guarantee']
   },
-  'Manufacturing ERP': {
+  'manufacturing': {
     free: ['Basic Production Tracking', '1 Workshop', 'Limited Raw Materials'],
     pro: ['BOM Management', 'Labor Tracking', 'Automatic Stock Updates', 'Multiple Warehouses'],
     custom: ['Custom Machine Integration', 'Advanced Analytics', 'On-premises Deployment', 'API Access']
   },
-  'Education': {
+  'education': {
     free: ['Up to 100 Students', 'Basic Attendance', 'Fee Tracking'],
     pro: ['Smart Admissions', 'Dynamic Syllabus Tracker', 'Live Bus Tracking', 'Parents Portal'],
     custom: ['Multi-branch Management', 'Custom ERP Integration', 'Biometric Attendance', 'Dedicated Support']
   },
-  'Health Care': {
+  'healthcare': {
     free: ['Basic OPD', 'Single Doctor', 'Limited Patient Records'],
     pro: ['Pharmacy Inventory', 'Lab Report Management', 'Bed Tracking', 'Online Appointments'],
     custom: ['Custom HIS Integration', 'NABH Compliance', 'Multi-specialty Setup', 'Dedicated Server']
   },
-  'Hotel/Restaurant': {
+  'hospitality': {
     free: ['Basic Table Management', 'Limited Menu Items', 'Simple Billing'],
     pro: ['Kitchen Display System (KDS)', 'Room Booking', 'Self-ordering Kiosk', 'Inventory Tracking'],
     custom: ['Custom Chain Management', 'Loyalty Program Integration', 'API Access', 'SLA Guarantee']
   },
-  'Transport Management': {
+  'transport': {
     free: ['Basic Vehicle Tracking', 'Single Owner', 'Simple Trip Logs'],
     pro: ['Fleet Tracking', 'Driver Wallet', 'Part-load Management', 'Expense Tracking'],
     custom: ['Custom GPS Integration', 'Multi-branch Operations', 'Advanced Analytics', 'Dedicated Support']
   },
-  'Daily Services': {
+  'services': {
     free: ['Basic Appointments', 'Single Service Provider', 'Simple Invoicing'],
     pro: ['Online Booking', 'Customer Management', 'Payment Integration', 'Public App Listing'],
     custom: ['Custom Agency Management', 'Staff Scheduling', 'API Access', 'SLA Guarantee']
   },
-  'Agri Management': {
+  'agriculture': {
     free: ['Weather Alerts', 'Basic Crop Diary', 'Limited Expense Tracking'],
     pro: ['Labor Payment Management', 'Smart Crop Calendar', 'KCC/AIF Loan Tracking', 'Inventory Management'],
     custom: ['FPO/FPC Management', 'Custom Supply Chain', 'Advanced Analytics', 'Dedicated Account Manager']

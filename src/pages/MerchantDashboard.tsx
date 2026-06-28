@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -33,14 +34,28 @@ import {
   Image as ImageIcon,
   Edit,
   Tags,
-  FileDown
+  FileDown,
+  Grip,
+  Truck,
+  Bed,
+  Pill,
+  Factory,
+  Utensils,
+  Clipboard,
+  Map,
+  Calendar,
+  Sprout,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
-import { Product, CartItem } from '@/src/types';
+import { Product, CartItem, ModuleMaster, MerchantSubscription, ModuleType } from '@/src/types';
 import { useAuth } from '../contexts/AuthContext';
+import { useTenant } from '../contexts/TenantContext';
+import { getSupabaseClient } from '../lib/supabase';
+import { useModules } from '../hooks/useModules';
 
 export interface OnlineOrder {
   id: string;
@@ -52,51 +67,44 @@ export interface OnlineOrder {
   created_at?: string;
 }
 
-// Dummy data for initial state
-const mockProducts: Product[] = [
-  { id: 'P-001', name: 'Aashirvaad Atta 5kg', price: 210, stock: 50, unit: 'Kg', category: 'Grocery', barcode: '8901234567890' },
-  { id: 'P-002', name: 'Fortune Sunflower Oil 1L', price: 145, stock: 30, unit: 'Ltr', category: 'Grocery', barcode: '8901234567891' },
-  { id: 'P-003', name: 'Surf Excel Matic 1kg', price: 250, stock: 20, unit: 'Box', category: 'Cleaning', barcode: '8901234567892' },
-  { id: 'P-004', name: 'Maggi Noodles', price: 14, stock: 100, unit: 'Piece', category: 'Snacks', barcode: '8901234567893' },
-];
-
-const mockOrders: OnlineOrder[] = [
-  {
-    id: 'ORD-9921',
-    customer_name: 'Rohan Sharma',
-    address: 'Sector 62, Noida',
-    items: [
-      { name: 'Aashirvaad Atta 5kg', quantity: 1, price: 210 },
-      { name: 'Fortune Sunflower Oil 1L', quantity: 4, price: 145 }
-    ],
-    total_amount: 850,
-    status: 'New'
-  },
-  {
-    id: 'ORD-9918',
-    customer_name: 'Neha Gupta',
-    address: 'Indirapuram, Ghaziabad',
-    items: [
-      { name: 'Surf Excel Matic 1kg', quantity: 2, price: 250 },
-      { name: 'Maggi Noodles', quantity: 10, price: 14 }
-    ],
-    total_amount: 640,
-    status: 'Ready to Pack'
-  }
-];
 
 export default function MerchantDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, userRole, activeModule, logout, loading } = useAuth();
+  const { user, userRole, activeModule: initialActiveModule, logout, loading } = useAuth();
+  const { tenant } = useTenant();
   
   const role = location.state?.role || userRole || 'admin';
-  const module = location.state?.module || activeModule || 'Retail POS';
+  const initialModule = location.state?.module || initialActiveModule || 'Retail POS';
   
   const [activeTab, setActiveTab] = useState('pos');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [orders, setOrders] = useState<OnlineOrder[]>(mockOrders);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<OnlineOrder[]>([]);
+  
+  const [activeModuleState, setActiveModuleState] = useState<ModuleType>(initialModule as ModuleType);
+  const { modules: moduleMaster, subscriptions: merchantSubscriptions, loading: modulesLoading } = useModules(user?.id);
+  const [isModuleMenuOpen, setIsModuleMenuOpen] = useState(false);
+
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
+
+  const [showPaymentModal, setShowPaymentModal] = useState(location.state?.showPaymentModal || false);
+  const [paymentAmount, setPaymentAmount] = useState(location.state?.amount || 0);
+  const [paymentPlan, setPaymentPlan] = useState(location.state?.plan || 'Pro');
+  const [paymentModule, setPaymentModule] = useState(location.state?.module || initialModule);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const handlePaymentSuccess = async () => {
+    setIsProcessingPayment(true);
+    const supabase = getSupabaseClient();
+    if (supabase && user) {
+       await supabase.from('merchant_subscriptions').update({ plan_type: paymentPlan }).eq('merchant_id', user.id).eq('module_id', paymentModule);
+    }
+    alert('Payment successful! Your plan has been upgraded.');
+    setShowPaymentModal(false);
+    setIsProcessingPayment(false);
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -104,31 +112,153 @@ export default function MerchantDashboard() {
     }
   }, [user, loading, navigate]);
 
-  if (loading) {
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      const supabase = getSupabaseClient();
+      if (supabase && user) {
+        try {
+          // Verify table existence first to prevent crash
+          const { error: tableError } = await supabase.from('users').select('id').limit(1);
+          if (tableError && (tableError.code === 'PGRST205' || tableError.code === '42P01')) {
+            console.warn("Database tables not initialized. Empty state fallback.", tableError);
+            if (isMounted) setIsDataInitialized(true);
+            return;
+          }
+
+          // Fetch Products
+          const { data: productsData } = await supabase.from('products').select('*').eq('merchant_id', user.id);
+          if (productsData && isMounted) setProducts(productsData);
+
+          // Fetch Orders
+          const { data: ordersData } = await supabase.from('orders').select('*').eq('merchant_id', user.id).order('created_at', { ascending: false });
+          if (ordersData && isMounted) {
+            // we also need to fetch order items to populate the order items.
+            const { data: orderItemsData } = await supabase.from('order_items').select('*, products(name)');
+            const formattedOrders = ordersData.map(order => ({
+              ...order,
+              items: (orderItemsData || []).filter(item => item.order_id === order.id).map(item => ({
+                name: (item as any).products?.name || 'Unknown',
+                quantity: item.quantity,
+                price: item.price
+              }))
+            }));
+            setOrders(formattedOrders as any);
+          }
+
+          if (isMounted) setIsDataInitialized(true);
+        } catch (e) {
+          console.warn("Supabase fetch failed:", e);
+          if (isMounted) setIsDataInitialized(true);
+        }
+      } else {
+        if (isMounted) setIsDataInitialized(true);
+      }
+    };
+
+    fetchData();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  if (loading || modulesLoading || !isDataInitialized) {
     return <div className="h-screen flex flex-col items-center justify-center">
       <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-slate-500 font-medium animate-pulse">Loading BahiBox...</p>
+      <p className="text-slate-500 font-medium animate-pulse">
+        {!isDataInitialized ? 'Initializing Data...' : `Loading ${tenant ? tenant.brand_name : 'BahiBox'}...`}
+      </p>
     </div>;
   }
 
   if (!user) return null;
 
-  const navItems = [
-    { id: 'pos', label: 'Hybrid POS', icon: ShoppingCart },
-    { id: 'inventory', label: 'Master & Inventory', icon: Package },
-    { id: 'gst', label: 'GST & Tax', icon: Calculator },
-    { id: 'ledger', label: 'Purchase & Ledger', icon: Wallet },
-    { id: 'crm', label: 'CRM & Payroll', icon: Users },
-  ];
+  // Dynamic Nav Items based on ActiveModuleState
+  const getNavItems = () => {
+    switch (activeModuleState as string) {
+      case 'Education':
+        return [
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'students', label: 'Student Admissions', icon: Users },
+          { id: 'fees', label: 'Fee Counters', icon: Banknote },
+          { id: 'syllabus', label: 'Syllabus Tracker', icon: FileText },
+          { id: 'transport', label: 'Live Bus Tracking', icon: Truck },
+        ];
+      case 'Healthcare':
+        return [
+          { id: 'dashboard', label: 'Hospital Dashboard', icon: LayoutDashboard },
+          { id: 'opd', label: 'OPD & Appointments', icon: Users },
+          { id: 'beds', label: 'Bed Management', icon: Bed },
+          { id: 'pharmacy', label: 'Pharmacy POS', icon: Pill },
+        ];
+      case 'Manufacturing':
+        return [
+          { id: 'dashboard', label: 'Factory Dashboard', icon: LayoutDashboard },
+          { id: 'production', label: 'Production Units', icon: Factory },
+          { id: 'inventory', label: 'Raw Materials', icon: Package },
+          { id: 'dispatch', label: 'Dispatch', icon: Truck },
+        ];
+      case 'Hospitality':
+        return [
+          { id: 'dashboard', label: 'Hotel Dashboard', icon: LayoutDashboard },
+          { id: 'booking', label: 'Room Bookings', icon: Bed },
+          { id: 'restaurant', label: 'Restaurant POS', icon: Utensils },
+          { id: 'housekeeping', label: 'Housekeeping', icon: Clipboard },
+        ];
+      case 'Transport':
+        return [
+          { id: 'dashboard', label: 'Fleet Dashboard', icon: LayoutDashboard },
+          { id: 'vehicles', label: 'Vehicles', icon: Truck },
+          { id: 'drivers', label: 'Drivers', icon: Users },
+          { id: 'trips', label: 'Trip Management', icon: Map },
+        ];
+      case 'Services':
+        return [
+          { id: 'dashboard', label: 'Services Dashboard', icon: LayoutDashboard },
+          { id: 'bookings', label: 'Bookings', icon: Calendar },
+          { id: 'staff', label: 'Staff Management', icon: Users },
+          { id: 'invoices', label: 'Invoices', icon: FileText },
+        ];
+      case 'Agriculture':
+        return [
+          { id: 'dashboard', label: 'Farm Dashboard', icon: LayoutDashboard },
+          { id: 'crops', label: 'Crop Management', icon: Sprout },
+          { id: 'inventory', label: 'Inventory', icon: Package },
+          { id: 'sales', label: 'Produce Sales', icon: Banknote },
+        ];
+      case 'Retail POS':
+      default:
+        return [
+          { id: 'pos', label: 'Hybrid POS', icon: ShoppingCart },
+          { id: 'inventory', label: 'Master & Inventory', icon: Package },
+          { id: 'gst', label: 'GST & Tax', icon: Calculator },
+          { id: 'ledger', label: 'Purchase & Ledger', icon: Wallet },
+          { id: 'crm', label: 'CRM & Payroll', icon: Users },
+        ];
+    }
+  };
+  
+  const navItems = getNavItems();
 
   const handleLogout = async () => {
     try {
       await logout();
       navigate('/');
     } catch (err) {
-      console.error(err);
+      console.warn(err);
     }
   };
+
+  const activeModule = moduleMaster.find(m => m.module_name === activeModuleState);
+  const activeSubscription = activeModule ? merchantSubscriptions.find(s => s.module_id === activeModule.id && s.status === 'Active') : null;
+  
+  let daysUntilExpiry: number | null = null;
+  if (activeSubscription?.end_date) {
+    const endDate = new Date(activeSubscription.end_date);
+    const now = new Date();
+    const diffTime = endDate.getTime() - now.getTime();
+    daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+  const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
+  const isExpired = daysUntilExpiry !== null && daysUntilExpiry < 0;
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
@@ -145,8 +275,19 @@ export default function MerchantDashboard() {
           <div className="relative flex flex-col w-4/5 max-w-sm bg-white h-full shadow-2xl p-6 animate-in slide-in-from-left duration-200">
             <div className="flex items-center justify-between pb-6 border-b border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">B</div>
-                <span className="text-xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+                {tenant ? (
+                  <>
+                    <div className="w-9 h-9 rounded-xl overflow-hidden">
+                      <img src={tenant.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                    </div>
+                    <span className="text-xl font-extrabold tracking-tight text-slate-900" style={{ color: tenant.primary_color }}>{tenant.brand_name}</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">B</div>
+                    <span className="text-xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+                  </>
+                )}
               </div>
               <button 
                 onClick={() => setIsMenuOpen(false)}
@@ -158,11 +299,12 @@ export default function MerchantDashboard() {
 
             <div className="py-4 border-b border-slate-100 bg-slate-50/50 -mx-6 px-6">
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Active Module</p>
-              <p className="font-bold text-slate-800 text-sm">Retail & POS</p>
+              <p className="font-bold text-slate-800 text-sm">{activeModuleState}</p>
               <p className="text-xs text-slate-500 truncate mt-1">{user?.email || 'User'}</p>
             </div>
 
-            <nav className="flex-1 py-6 space-y-1 overflow-y-auto">
+            <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">Module Features</p>
               {navItems.map((item) => (
                 <button
                   key={item.id}
@@ -172,14 +314,48 @@ export default function MerchantDashboard() {
                   }}
                   className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors ${
                     activeTab === item.id 
-                      ? 'bg-primary/10 text-primary' 
+                      ? 'text-primary' 
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`}
+                  style={activeTab === item.id && tenant ? { backgroundColor: `${tenant.primary_color}1a`, color: tenant.primary_color } : activeTab === item.id ? { backgroundColor: 'var(--primary-10)', color: 'var(--primary)' } : {}}
                 >
                   <item.icon size={18} />
                   {item.label}
                 </button>
               ))}
+
+              <div className="mt-6 mb-2">
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">Your Subscriptions</p>
+                <div className="space-y-1">
+                  {moduleMaster.map((mod) => {
+                    const sub = merchantSubscriptions.find(s => s.module_id === mod.id);
+                    const isSubscribed = sub && sub.status === 'Active';
+                    if (!isSubscribed) return null;
+                    
+                    const isActive = activeModuleState === mod.module_name;
+                    return (
+                      <button
+                        key={mod.id}
+                        onClick={() => {
+                          setActiveModuleState(mod.module_name as ModuleType);
+                          setActiveTab(mod.module_name === 'Retail POS' ? 'pos' : 'dashboard');
+                          setIsMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                          isActive
+                            ? 'bg-slate-100 text-slate-900'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <div className="w-6 flex justify-center">
+                          {isActive && <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} />}
+                        </div>
+                        {mod.module_name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </nav>
 
             <div className="pt-4 border-t border-slate-100">
@@ -200,7 +376,7 @@ export default function MerchantDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden flex flex-col">
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between" style={tenant ? { borderBottomColor: tenant.primary_color } : {}}>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsMenuOpen(true)}
@@ -209,16 +385,100 @@ export default function MerchantDashboard() {
             >
               <Menu size={22} />
             </button>
-            <span className="text-lg font-extrabold tracking-tight text-slate-900">BahiBox POS</span>
+            {tenant ? (
+              <div className="flex items-center gap-2">
+                 <img src={tenant.logo_url} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
+                 <span className="text-lg font-extrabold tracking-tight text-slate-900">{tenant.brand_name} POS</span>
+              </div>
+            ) : (
+              <span className="text-lg font-extrabold tracking-tight text-slate-900">BahiBox POS</span>
+            )}
           </div>
-          <button 
-            onClick={handleLogout}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-            title="Logout"
-          >
-            <LogOut size={20} />
-          </button>
+          <div className="flex items-center gap-2 relative">
+            <button 
+              onClick={() => setIsModuleMenuOpen(!isModuleMenuOpen)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors relative"
+              title="Switch Module"
+            >
+              <Grip size={20} />
+            </button>
+            
+            {isModuleMenuOpen && (
+              <div className="absolute top-12 right-0 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest px-2 pt-2 pb-3 mb-1 border-b border-slate-100">All Modules</p>
+                <div className="grid grid-cols-1 gap-1 max-h-96 overflow-y-auto">
+                  {moduleMaster.map(mod => {
+                    const sub = merchantSubscriptions.find(s => s.module_id === mod.id);
+                    const isSubscribed = sub && sub.status === 'Active';
+                    const isActive = activeModuleState === mod.module_name;
+
+                    return (
+                      <div key={mod.id} className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50 text-slate-700'} ${!isSubscribed ? 'opacity-70 grayscale' : ''}`}>
+                        <button
+                          disabled={!isSubscribed}
+                          onClick={() => {
+                            if (isSubscribed) {
+                              setActiveModuleState(mod.module_name as ModuleType);
+                              setActiveTab(mod.module_name === 'Retail POS' ? 'pos' : 'dashboard');
+                              setIsModuleMenuOpen(false);
+                            }
+                          }}
+                          className="flex-1 text-left font-medium disabled:cursor-not-allowed flex items-center"
+                          style={isActive && tenant ? { color: tenant.primary_color } : {}}
+                        >
+                          {mod.module_name}
+                          {isActive && <CheckCircle size={14} className={`ml-2 ${tenant ? "" : "text-primary"}`} style={tenant ? { color: tenant.primary_color } : {}} />}
+                        </button>
+                        {!isSubscribed && (
+                          <button 
+                            onClick={() => navigate(`/checkout?module=${encodeURIComponent(mod.id)}&plan=Pro`)}
+                            className="ml-2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full hover:bg-primary/90 transition-colors shrink-0"
+                          >
+                            Activate
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {moduleMaster.length === 0 && (
+                     <div className="px-3 py-4 text-center text-sm text-slate-500">No modules available.</div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="w-px h-6 bg-slate-200 mx-2"></div>
+            
+            <button 
+              onClick={handleLogout}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+              title="Logout"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
         </header>
+
+        {(isExpiringSoon || isExpired) && activeSubscription && (
+          <div className={`px-6 py-3 flex items-center justify-between text-sm ${isExpired ? 'bg-red-50 text-red-700 border-b border-red-100' : 'bg-amber-50 text-amber-700 border-b border-amber-100'}`}>
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} />
+              <p>
+                {isExpired ? (
+                  <>Your subscription for <strong>{activeModuleState}</strong> has expired.</>
+                ) : (
+                  <>Your subscription for <strong>{activeModuleState}</strong> expires in <strong>{daysUntilExpiry} {daysUntilExpiry === 1 ? 'day' : 'days'}</strong>.</>
+                )}
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate(`/checkout?module=${encodeURIComponent(activeModuleState)}&plan=Pro`)}
+              className={`px-4 py-1.5 font-semibold rounded-full transition-colors text-xs ${isExpired ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+            >
+              Renew Now
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-auto bg-slate-50">
           {activeTab === 'pos' && (
@@ -229,7 +489,7 @@ export default function MerchantDashboard() {
               setOrders={setOrders} 
             />
           )}
-          {activeTab === 'inventory' && (
+          {activeTab === 'inventory' && activeModuleState === 'Retail POS' && (
             <InventoryView 
               products={products} 
               setProducts={setProducts} 
@@ -239,8 +499,95 @@ export default function MerchantDashboard() {
           {activeTab === 'gst' && <GSTView />}
           {activeTab === 'ledger' && <LedgerView />}
           {activeTab === 'crm' && <CRMView />}
+          
+          {/* New Module Dashboards / Placeholders */}
+          {activeTab === 'dashboard' && <GenericDashboardView moduleName={activeModuleState} />}
+          {activeTab !== 'pos' && activeTab !== 'inventory' && activeTab !== 'gst' && activeTab !== 'ledger' && activeTab !== 'crm' && activeTab !== 'dashboard' && (
+             <GenericPlaceholderView tabId={activeTab} moduleName={activeModuleState} />
+          )}
+          {activeTab === 'inventory' && activeModuleState !== 'Retail POS' && (
+             <GenericPlaceholderView tabId={activeTab} moduleName={activeModuleState} />
+          )}
         </div>
       </main>
+
+      {/* Payment Gateway Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full animate-in zoom-in-95 duration-200">
+             <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <CheckCircle size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900">Complete Payment</h3>
+                <p className="text-slate-500 mt-2">You are upgrading {paymentModule} to {paymentPlan} plan.</p>
+             </div>
+
+             <div className="bg-slate-50 p-4 rounded-xl mb-6">
+                <div className="flex justify-between items-center mb-2">
+                   <span className="text-slate-600 font-medium">Amount Due</span>
+                   <span className="text-xl font-bold text-slate-900">₹{paymentAmount}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-slate-500">
+                   <span>Includes 18% GST</span>
+                </div>
+             </div>
+
+             <div className="space-y-3">
+               <button 
+                  onClick={handlePaymentSuccess}
+                  disabled={isProcessingPayment}
+                  className="w-full bg-emerald-600 text-white font-bold py-3.5 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
+               >
+                  {isProcessingPayment ? 'Processing...' : 'Pay with UPI / Card'}
+               </button>
+               <button 
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors"
+               >
+                  Cancel & Continue on Free Plan
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GenericDashboardView({ moduleName }: { moduleName: string }) {
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-4">{moduleName} Dashboard</h1>
+      <p className="text-slate-600 mb-8">Overview and key metrics for your {moduleName} operations.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+           <CardHeader><CardTitle className="text-lg">Total Records</CardTitle></CardHeader>
+           <CardContent><p className="text-4xl font-bold text-slate-800">0</p></CardContent>
+        </Card>
+        <Card>
+           <CardHeader><CardTitle className="text-lg">Active Sessions</CardTitle></CardHeader>
+           <CardContent><p className="text-4xl font-bold text-emerald-600">0</p></CardContent>
+        </Card>
+        <Card>
+           <CardHeader><CardTitle className="text-lg">Revenue Today</CardTitle></CardHeader>
+           <CardContent><p className="text-4xl font-bold text-primary">₹0.00</p></CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function GenericPlaceholderView({ tabId, moduleName }: { tabId: string, moduleName: string }) {
+  return (
+    <div className="p-8 h-full flex items-center justify-center text-center">
+      <div>
+        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Factory className="text-slate-400" size={40} />
+        </div>
+        <h2 className="text-2xl font-bold mb-2 text-slate-800 capitalize">{tabId.replace('-', ' ')} Module</h2>
+        <p className="text-slate-500 max-w-md mx-auto">This feature is part of the {moduleName} suite. Connect your live data to start managing these records.</p>
+      </div>
     </div>
   );
 }
@@ -256,6 +603,7 @@ interface HybridPOSViewProps {
 }
 
 function HybridPOSView({ products, setProducts, orders, setOrders }: HybridPOSViewProps) {
+  const { tenant } = useTenant();
   const [posTab, setPosTab] = useState<'in-store' | 'scan-go' | 'online'>('in-store');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -295,7 +643,7 @@ function HybridPOSView({ products, setProducts, orders, setOrders }: HybridPOSVi
     }, 0);
   };
 
-  const [receiptData, setReceiptData] = useState<{items: CartItem[], total: number, date: string, cash: number, upi: number} | null>(null);
+  const [receiptData, setReceiptData] = useState<{items: CartItem[], total: number, date: string, cash: number, upi: number, orderId?: string} | null>(null);
 
   const totalAmount = calculateTotal();
   const upiAmount = Math.max(0, totalAmount - cashAmount);
@@ -313,7 +661,48 @@ function HybridPOSView({ products, setProducts, orders, setOrders }: HybridPOSVi
   };
 
   const handleCheckout = async () => {
-    // 1. Decrement products locally
+    // 1. Prepare payment info
+    const paymentMethod = splitPayment ? 'Split' : (cashAmount >= totalAmount ? 'Cash' : 'UPI');
+    const newOrderId = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
+
+    const supabase = getSupabaseClient();
+    if (supabase && tenant?.merchant_id) {
+      try {
+        // Create Order
+        const { error: orderError } = await supabase.from('orders').insert({
+          id: newOrderId,
+          merchant_id: tenant.merchant_id,
+          customer_name: 'Walk-in Customer',
+          total_amount: totalAmount,
+          payment_method: paymentMethod,
+          status: 'Completed'
+        });
+
+        if (orderError) console.warn("Order creation failed", orderError);
+
+        // Create Order Items & Update Stock
+        for (const item of cart) {
+          await supabase.from('order_items').insert({
+            order_id: newOrderId,
+            product_id: item.id,
+            quantity: item.quantity,
+            price: item.price
+          });
+
+          // Decrement stock in DB
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            await supabase.from('products').update({
+              stock: Math.max(0, product.stock - item.quantity)
+            }).eq('id', product.id);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to process checkout to DB", err);
+      }
+    }
+
+    // 2. Decrement products locally
     setProducts(prevProducts => {
       return prevProducts.map(p => {
         const cartItem = cart.find(c => c.id === p.id);
@@ -324,18 +713,24 @@ function HybridPOSView({ products, setProducts, orders, setOrders }: HybridPOSVi
       });
     });
 
-    // 2. Open Receipt / Print Preview
+    // 4. Open Receipt / Print Preview
     setReceiptData({
       items: [...cart],
       total: totalAmount,
       date: new Date().toLocaleString(),
       cash: cashAmount,
-      upi: splitPayment ? upiAmount : totalAmount
+      upi: splitPayment ? upiAmount : totalAmount,
+      orderId: newOrderId
     });
 
     setCart([]);
     setCashAmount(0);
     setSplitPayment(false);
+    
+    // Auto-trigger print after setting receipt data
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const handleAcceptOrder = async (orderId: string) => {
@@ -769,73 +1164,194 @@ function HybridPOSView({ products, setProducts, orders, setOrders }: HybridPOSVi
       </div>
 
       {/* Receipt Modal */}
-      {receiptData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setReceiptData(null)}></div>
-          <div className="bg-white p-8 rounded-2xl shadow-2xl relative z-10 w-[400px] flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-start mb-6 print:hidden">
-              <h2 className="text-2xl font-extrabold text-slate-900">Receipt Preview</h2>
+      <AnimatePresence>
+        {receiptData && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" 
+              onClick={() => setReceiptData(null)}
+            ></motion.div>
+            <motion.div 
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="bg-white p-8 rounded-2xl shadow-2xl relative z-10 w-[600px] flex flex-col max-h-[90vh]"
+            >
+              <div className="flex justify-between items-start mb-6 print:hidden">
+              <h2 className="text-2xl font-extrabold text-slate-900">Checkout Success</h2>
               <button onClick={() => setReceiptData(null)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-slate-800"><X size={20}/></button>
             </div>
             
-            {/* Printable Area */}
-            <div id="print-receipt" className="flex-1 overflow-auto bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6 font-mono text-sm text-slate-800 printable-area print:p-0 print:border-none print:bg-white print:m-0 print:shadow-none print:w-full">
-               <div className="text-center mb-6">
-                 <h1 className="text-xl font-black uppercase tracking-widest border-b-2 border-slate-800 pb-2 mb-2 inline-block print:text-black print:border-black">BAHIBOX STORE</h1>
-                 <p className="text-xs text-slate-500 print:text-black">Date: {receiptData.date}</p>
-               </div>
-               
-               <table className="w-full text-left mb-6">
-                 <thead>
-                   <tr className="border-b border-dashed border-slate-300 print:border-black">
-                     <th className="pb-2 font-bold uppercase text-xs print:text-black">Item</th>
-                     <th className="pb-2 font-bold uppercase text-xs text-center w-12 print:text-black">Qty</th>
-                     <th className="pb-2 font-bold uppercase text-xs text-right w-20 print:text-black">Amount</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-dashed divide-slate-200 print:divide-black">
-                   {receiptData.items.map((item, idx) => (
-                     <tr key={idx}>
-                       <td className="py-2 pr-2 print:text-black">{item.name}</td>
-                       <td className="py-2 text-center print:text-black">{item.quantity}</td>
-                       <td className="py-2 text-right print:text-black">₹{((item.price * item.quantity) - item.discountValue).toFixed(2)}</td>
+            <div className="flex-1 overflow-auto bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6 font-mono text-sm text-slate-800 print:hidden">
+              <div className="text-center mb-6">
+                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                <h1 className="text-xl font-black uppercase tracking-widest border-b-2 border-slate-800 pb-2 mb-2 inline-block">Order Placed</h1>
+                <p className="text-xs text-slate-500">Order ID: {receiptData.orderId || 'N/A'}</p>
+                <p className="text-xs text-slate-500">Total: ₹{receiptData.total.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* Hidden Printable Areas - Only shown on print */}
+            <div className="hidden print:block printable-area absolute left-0 top-0">
+               {/* A4 Tax Invoice (B2B) */}
+               <div id="print-a4" className="hidden print:block w-[210mm] min-h-[297mm] bg-white p-10 font-sans mx-auto text-black print:text-black">
+                 <div className="flex justify-between items-start border-b-2 border-slate-800 pb-6 mb-6">
+                   <div>
+                     <h1 className="text-3xl font-black uppercase tracking-widest">{tenant?.brand_name || 'BAHIBOX STORE'}</h1>
+                     <p className="text-sm mt-1">Tax Invoice / Bill of Supply</p>
+                     <p className="text-sm">GSTIN: 27AAAAA0000A1Z5</p>
+                   </div>
+                   <div className="text-right">
+                     <p className="font-bold text-lg">INVOICE</p>
+                     <p className="text-sm">Order ID: {receiptData.orderId}</p>
+                     <p className="text-sm">Date: {receiptData.date}</p>
+                   </div>
+                 </div>
+
+                 <div className="flex justify-between mb-8">
+                   <div>
+                     <p className="font-bold border-b border-slate-300 pb-1 mb-2 inline-block">Billed To</p>
+                     <p className="text-sm font-semibold">Walk-in Customer</p>
+                     <p className="text-sm">Cash Sales</p>
+                   </div>
+                 </div>
+
+                 <table className="w-full text-left mb-8 border-collapse">
+                   <thead>
+                     <tr className="bg-slate-100 border-b-2 border-slate-800">
+                       <th className="p-2 font-bold uppercase text-xs">S.No</th>
+                       <th className="p-2 font-bold uppercase text-xs">Description of Goods</th>
+                       <th className="p-2 font-bold uppercase text-xs">HSN/SAC</th>
+                       <th className="p-2 font-bold uppercase text-xs text-center">Qty</th>
+                       <th className="p-2 font-bold uppercase text-xs text-right">Rate</th>
+                       <th className="p-2 font-bold uppercase text-xs text-right">Amount</th>
                      </tr>
-                   ))}
-                 </tbody>
-               </table>
-               
-               <div className="border-t-2 border-slate-800 pt-4 space-y-2 print:border-black">
-                 <div className="flex justify-between font-bold text-lg print:text-black">
-                   <span>TOTAL</span>
-                   <span>₹{receiptData.total.toFixed(2)}</span>
+                   </thead>
+                   <tbody className="border-b-2 border-slate-800">
+                     {receiptData.items.map((item, idx) => (
+                       <tr key={idx} className="border-b border-slate-200">
+                         <td className="p-2 text-sm">{idx + 1}</td>
+                         <td className="p-2 text-sm font-semibold">{item.name}</td>
+                         <td className="p-2 text-sm">8517</td>
+                         <td className="p-2 text-sm text-center">{item.quantity} {item.unit || 'Pc'}</td>
+                         <td className="p-2 text-sm text-right">₹{item.price.toFixed(2)}</td>
+                         <td className="p-2 text-sm text-right font-semibold">₹{((item.price * item.quantity) - item.discountValue).toFixed(2)}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+
+                 <div className="flex justify-end mb-12">
+                   <div className="w-64">
+                     <div className="flex justify-between py-1 text-sm border-b border-slate-200">
+                       <span>Subtotal</span>
+                       <span className="font-semibold">₹{receiptData.total.toFixed(2)}</span>
+                     </div>
+                     <div className="flex justify-between py-1 text-sm border-b border-slate-200">
+                       <span>CGST (9%)</span>
+                       <span className="font-semibold">₹{(receiptData.total * 0.09).toFixed(2)}</span>
+                     </div>
+                     <div className="flex justify-between py-1 text-sm border-b-2 border-slate-800">
+                       <span>SGST (9%)</span>
+                       <span className="font-semibold">₹{(receiptData.total * 0.09).toFixed(2)}</span>
+                     </div>
+                     <div className="flex justify-between py-2 text-xl font-black">
+                       <span>TOTAL</span>
+                       <span>₹{receiptData.total.toFixed(2)}</span>
+                     </div>
+                   </div>
                  </div>
-                 <div className="flex justify-between text-slate-500 text-xs mt-4 print:text-black">
-                   <span>Cash Paid:</span>
-                   <span>₹{receiptData.cash.toFixed(2)}</span>
-                 </div>
-                 <div className="flex justify-between text-slate-500 text-xs print:text-black">
-                   <span>UPI / Card:</span>
-                   <span>₹{receiptData.upi.toFixed(2)}</span>
+
+                 <div className="flex justify-between items-end mt-16 pt-8 border-t border-slate-300">
+                   <div className="text-xs text-slate-500">
+                     <p>Terms & Conditions:</p>
+                     <p>1. Goods once sold will not be taken back.</p>
+                     <p>2. Subject to local jurisdiction.</p>
+                   </div>
+                   <div className="text-center">
+                     <div className="w-40 border-b-2 border-slate-800 mb-2"></div>
+                     <p className="text-sm font-bold">Authorized Signatory</p>
+                   </div>
                  </div>
                </div>
-               
-               <div className="mt-8 text-center border-t border-dashed border-slate-300 pt-4 print:border-black">
-                 <p className="font-bold text-xs uppercase tracking-widest print:text-black">Thank You!</p>
-                 <p className="text-[10px] text-slate-400 mt-1 print:text-black">Please visit again.</p>
+
+               {/* Thermal Receipt (B2C) - 3-inch (80mm) layout */}
+               <div id="print-thermal" className="hidden w-[80mm] bg-white p-4 font-mono text-xs mx-auto text-black print:text-black">
+                  <div className="text-center mb-4">
+                    {tenant?.logo_url && <img src={tenant.logo_url} alt="Logo" className="h-10 mx-auto mb-2 grayscale" />}
+                    <h1 className="text-lg font-black uppercase tracking-widest">{tenant?.brand_name || 'BAHIBOX STORE'}</h1>
+                    <p className="text-[10px]">Order: {receiptData.orderId}</p>
+                    <p className="text-[10px]">{receiptData.date}</p>
+                  </div>
+                  
+                  <div className="border-t border-b border-dashed border-black py-2 mb-2">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr>
+                          <th className="pb-1 uppercase text-[10px] w-full">Item</th>
+                          <th className="pb-1 uppercase text-[10px] text-center px-2">Qty</th>
+                          <th className="pb-1 uppercase text-[10px] text-right">Amt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {receiptData.items.map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="py-1 align-top pr-1">{item.name}</td>
+                            <td className="py-1 align-top text-center">{item.quantity}</td>
+                            <td className="py-1 align-top text-right">{(item.price * item.quantity).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="space-y-1 py-2">
+                    <div className="flex justify-between font-bold text-sm">
+                      <span>TOTAL</span>
+                      <span>₹{receiptData.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 text-center text-[10px]">
+                    <div className="mx-auto w-24 h-24 bg-slate-200 mb-2 border border-black flex items-center justify-center">QR CODE</div>
+                    <p className="font-bold uppercase tracking-widest mt-2">Thank You!</p>
+                  </div>
                </div>
             </div>
             
             <div className="flex gap-4 print:hidden">
               <Button variant="outline" className="flex-1 h-12 font-bold" onClick={() => setReceiptData(null)}>Close</Button>
               <Button className="flex-1 h-12 font-bold bg-slate-900 text-white" onClick={() => {
+                  document.documentElement.style.setProperty('--print-display-a4', 'none');
+                  document.documentElement.style.setProperty('--print-display-thermal', 'block');
+                  document.getElementById('print-a4')?.classList.add('hidden');
+                  document.getElementById('print-a4')?.classList.remove('print:block');
+                  document.getElementById('print-thermal')?.classList.remove('hidden');
+                  document.getElementById('print-thermal')?.classList.add('print:block');
                   window.print();
               }}>
-                <Printer size={18} className="mr-2"/> Print Receipt
+                <Printer size={18} className="mr-2"/> Print Thermal (3")
+              </Button>
+              <Button className="flex-1 h-12 font-bold bg-blue-900 text-white hover:bg-blue-800" onClick={() => {
+                  document.documentElement.style.setProperty('--print-display-a4', 'block');
+                  document.documentElement.style.setProperty('--print-display-thermal', 'none');
+                  document.getElementById('print-thermal')?.classList.add('hidden');
+                  document.getElementById('print-thermal')?.classList.remove('print:block');
+                  document.getElementById('print-a4')?.classList.remove('hidden');
+                  document.getElementById('print-a4')?.classList.add('print:block');
+                  window.print();
+              }}>
+                <FileText size={18} className="mr-2"/> Print Invoice (A4)
               </Button>
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -851,6 +1367,7 @@ interface InventoryViewProps {
 }
 
 function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps) {
+  const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
   
@@ -899,27 +1416,6 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
     'Delete ButtonColumn': false,
     'Print BandaButton': false
   });
-
-  useEffect(() => {
-    import('../lib/supabase').then(async ({ getSupabaseClient }) => {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        try {
-          const { data, error } = await supabase.from('products').select('*');
-          if (!error && data && data.length > 0) {
-             setProducts(prev => {
-                // simple deduplication based on id
-                const existingIds = new Set(prev.map(p => p.id));
-                const newItems = data.filter(p => !existingIds.has(p.id));
-                return [...prev, ...newItems];
-             });
-          }
-        } catch (e) {
-          console.error("Error fetching products from supabase", e);
-        }
-      }
-    });
-  }, [setProducts]);
 
   const toggleColumn = (col: string) => {
     setSelectedColumns(prev => ({ ...prev, [col]: !prev[col] }));
@@ -1014,7 +1510,8 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
           purchasePrice: Number(row.purchasePrice) || 0,
           stock: Number(row.stock) || 0,
           unit: row.unit || 'Piece',
-          barcode: row.barcode || String(Math.floor(8900000000000 + Math.random() * 99999999999))
+          barcode: row.barcode || String(Math.floor(8900000000000 + Math.random() * 99999999999)),
+          merchant_id: tenant?.merchant_id
         }));
 
         setProducts(prev => [...newProducts, ...prev]);
@@ -1084,24 +1581,9 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
       cess: newCess || 0,
       stock: newStock || 0,
       unit: 'Piece',
-      barcode: barcodeVal
+      barcode: barcodeVal,
+      merchant_id: tenant?.merchant_id
     };
-
-    // Import dynamically to avoid issues if not used in other parts
-    import('../lib/supabase').then(async ({ getSupabaseClient }) => {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        try {
-          const { error } = await supabase.from('products').insert([newProduct]);
-          if (error) {
-            console.error("Error saving to Supabase:", error);
-            alert("Error saving to Supabase: " + (error.message || JSON.stringify(error)));
-          }
-        } catch (e) {
-          console.error("Supabase integration error:", e);
-        }
-      }
-    });
 
     // Update local state
     setProducts(prev => [newProduct, ...prev]);

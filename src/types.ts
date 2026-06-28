@@ -56,6 +56,7 @@ export interface Product {
   cgst?: number;
   sgst?: number;
   igst?: number;
+  merchant_id?: string;
 }
 
 export interface JobPosting {
@@ -72,4 +73,44 @@ export interface CartItem extends Product {
   quantity: number;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
+}
+
+export interface Order {
+  id: string;
+  merchant_id: string;
+  total_amount: number;
+  status: string;
+  payment_method: string;
+  created_at?: string;
+  customer_name?: string;
+  customer_phone?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  price: number;
+}
+
+export interface ModuleMaster {
+  id: string;
+  module_name: string;
+  description?: string;
+  icon?: string;
+  price?: number;
+  status?: string;
+  test_mode_free?: boolean;
+  test_mode_pro?: boolean;
+  test_mode_custom?: boolean;
+}
+
+export interface MerchantSubscription {
+  id: string;
+  merchant_id: string;
+  module_id: string;
+  status: string;
+  start_date?: string;
+  end_date?: string;
 }

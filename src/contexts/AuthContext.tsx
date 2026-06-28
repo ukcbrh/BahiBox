@@ -33,8 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data && !error) {
           setUserRole(data.role as UserRole);
           setActiveModule(data.module as ModuleType);
-        } else if (error?.code === 'PGRST116') {
-          // Profile doesn't exist, create it (defaulting to admin for Google signins)
+        } else if (error?.code === 'PGRST116' || error?.code === 'PGRST205') {
+          // Profile doesn't exist or table missing, create it or fallback (defaulting to admin for Google signins)
           const newProfile = {
             id: user.id,
             name: user.user_metadata?.full_name || 'Unknown User',
@@ -43,16 +43,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             module: 'Retail POS',
             created_at: new Date().toISOString()
           };
-          const { error: insertError } = await supabase.from('users').insert(newProfile);
-          if (!insertError) {
-            setUserRole('admin');
-            setActiveModule('Retail POS');
-          } else {
-             console.error("Error creating user profile:", insertError);
+          if (error?.code === 'PGRST116') {
+             // Create profile in both users and merchants table
+             const { error: insertUserError } = await supabase.from('users').insert(newProfile);
+             if (insertUserError) {
+                console.warn("Could not insert user profile (table might not exist)", insertUserError);
+             }
+             const { error: insertMerchantError } = await supabase.from('merchants').insert({
+               id: user.id, // using user.id as merchant id
+               name: newProfile.name,
+               email: newProfile.email,
+               role: 'admin',
+               module: 'Retail POS',
+               created_at: new Date().toISOString()
+             });
+             if (insertMerchantError) {
+               console.warn("Could not insert merchant profile", insertMerchantError);
+             }
           }
+          setUserRole('admin');
+          setActiveModule('Retail POS');
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.warn("Error fetching user data (table might not exist). Falling back to admin role.");
+        setUserRole('admin');
+        setActiveModule('Retail POS');
       }
     };
 
@@ -116,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) {
-      console.error("Error signing in with Google:", error);
+      console.warn("Error signing in with Google:", error);
       throw error;
     }
     // Note: OAuth redirects, so state is handled by onAuthStateChange on return

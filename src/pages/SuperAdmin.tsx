@@ -67,6 +67,7 @@ export default function SuperAdmin() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [merchantsList, setMerchantsList] = useState<any[]>([]);
+  const [modulesMaster, setModulesMaster] = useState<any[]>([]);
   const [dashboardStats, setDashboardStats] = useState({
     totalUsers: 0,
     activeMerchants: 0,
@@ -75,8 +76,30 @@ export default function SuperAdmin() {
   });
 
   // States for sub-components
-  const [selectedModule, setSelectedModule] = useState('Retail POS');
+  const [selectedModule, setSelectedModule] = useState<string>('');
   const [broadcastMsg, setBroadcastMsg] = useState('');
+  
+  // Module Access Modal state
+  const [selectedMerchantForModules, setSelectedMerchantForModules] = useState<any>(null);
+  const [merchantSubscriptions, setMerchantSubscriptions] = useState<any[]>([]);
+
+  // Pricing State
+  const [editingPrice, setEditingPrice] = useState<string>('999');
+  const [testModeFree, setTestModeFree] = useState<boolean>(false);
+  const [testModePro, setTestModePro] = useState<boolean>(false);
+  const [testModeCustom, setTestModeCustom] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedModule) {
+       const mod = modulesMaster.find(m => m.id === selectedModule);
+       if (mod) {
+         setEditingPrice(mod.price?.toString() || '0');
+         setTestModeFree(mod.test_mode_free || false);
+         setTestModePro(mod.test_mode_pro || false);
+         setTestModeCustom(mod.test_mode_custom || false);
+       }
+    }
+  }, [selectedModule, modulesMaster]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -84,21 +107,70 @@ export default function SuperAdmin() {
         const supabase = getSupabaseClient();
         if (!supabase) return;
         
-        const { data: usersData, error: usersError } = await supabase.from('users').select('*');
-        if (usersError) throw usersError;
-
-        const users = (usersData || []).map(doc => ({
-          id: doc.id,
-          ...doc,
-          name: doc.name || 'Unknown User',
-          type: doc.module || 'Unknown Module',
-          location: doc.location || 'N/A',
-          status: doc.status || 'Active',
-          plan: doc.plan || 'Free Plan',
-          email: doc.email || 'N/A',
-          role: doc.role || 'staff'
-        }));
+        let users: any[] = [];
+        const { data: merchantsData, error: merchantsError } = await supabase.from('users').select('*');
         
+        if (!merchantsError && merchantsData) {
+          users = merchantsData.map(doc => ({
+            id: doc.id,
+            ...doc,
+            name: doc.name || 'Unknown User',
+            type: doc.type || doc.module || 'Unknown Module',
+            location: doc.location || 'N/A',
+            status: doc.status || 'Active',
+            plan: doc.plan || 'Free Plan',
+            email: doc.email || 'N/A',
+            role: doc.role || 'merchant'
+          }));
+        }
+
+        const fallbackModules = [
+          { id: 'retail', module_name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
+          { id: 'manufacturing', module_name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
+          { id: 'education', module_name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
+          { id: 'healthcare', module_name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
+          { id: 'hospitality', module_name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
+          { id: 'transport', module_name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
+          { id: 'services', module_name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
+          { id: 'agriculture', module_name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
+        ];
+
+        const { data: modulesData, error: modulesError } = await supabase.from('modules_master').select('*').order('module_name');
+        
+        let loadedModules = fallbackModules;
+        
+        if (modulesData && modulesData.length > 0) {
+          loadedModules = modulesData;
+          if (modulesData.length < 8) {
+            const existingIds = new Set(modulesData.map(m => m.id));
+            const missingModules = fallbackModules.filter(m => !existingIds.has(m.id));
+            if (missingModules.length > 0) {
+              try {
+                await supabase.from('modules_master').upsert(missingModules);
+                const { data: refreshedModules } = await supabase.from('modules_master').select('*').order('module_name');
+                if (refreshedModules) {
+                  loadedModules = refreshedModules;
+                }
+              } catch(e) {}
+            }
+          }
+        } else if (!modulesError || modulesError.code === 'PGRST116' || modulesError.code === 'PGRST205' || modulesError.code === '42P01') {
+          // Attempt to seed if empty
+          try {
+            const { error: seedErr } = await supabase.from('modules_master').insert(fallbackModules);
+            if (seedErr) {
+              console.warn("Could not seed modules_master:", seedErr);
+            }
+          } catch(e) {
+            console.warn("Exception seeding modules_master:", e);
+          }
+        }
+        
+        setModulesMaster(loadedModules);
+        if (!selectedModule && loadedModules.length > 0) {
+           setSelectedModule(loadedModules[0].id);
+        }
+
         let revenue = 0;
         try {
           const { data: subscriptions, error: subError } = await supabase.from('subscriptions').select('*');
@@ -110,7 +182,7 @@ export default function SuperAdmin() {
             });
           }
         } catch (subErr) {
-          console.error("Error fetching subscriptions:", subErr);
+          // ignore error if table doesn't exist
         }
 
         setMerchantsList(users);
@@ -121,7 +193,7 @@ export default function SuperAdmin() {
           totalRevenue: revenue
         }));
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.warn("Error fetching dashboard data:", error);
       }
     };
     
@@ -178,6 +250,78 @@ export default function SuperAdmin() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleOpenModulesModal = async (merchant: any) => {
+    setSelectedMerchantForModules(merchant);
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      const { data } = await supabase.from('merchant_subscriptions').select('*').eq('merchant_id', merchant.id);
+      if (data) {
+        setMerchantSubscriptions(data);
+      }
+    }
+  };
+
+  const toggleModuleAccess = async (moduleId: string, currentStatus: string) => {
+    if (!selectedMerchantForModules) return;
+    const newStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    // Optimistic update
+    setMerchantSubscriptions(prev => {
+      const exists = prev.find(s => s.module_id === moduleId);
+      if (exists) {
+        return prev.map(s => s.module_id === moduleId ? { ...s, status: newStatus } : s);
+      }
+      return [...prev, { module_id: moduleId, status: newStatus }];
+    });
+
+    await supabase.from('merchant_subscriptions').upsert({
+      merchant_id: selectedMerchantForModules.id,
+      module_id: moduleId,
+      status: newStatus
+    }, { onConflict: 'merchant_id, module_id' });
+  };
+
+  const handleUpdatePricing = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase || !selectedModule) return;
+    
+    const priceNum = parseFloat(editingPrice);
+    if (isNaN(priceNum)) {
+      alert("Invalid price");
+      return;
+    }
+
+    const { error } = await supabase.from('modules_master')
+      .update({ 
+        price: priceNum,
+        test_mode_free: testModeFree,
+        test_mode_pro: testModePro,
+        test_mode_custom: testModeCustom
+      })
+      .eq('id', selectedModule);
+
+    if (error) {
+      if (error.code === 'PGRST205' || error.code === '42P01') {
+        console.warn("Table modules_master not found, skipping update.");
+        alert("Simulated update: modules_master table not initialized.");
+      } else {
+        alert("Error updating price: " + error.message);
+      }
+    } else {
+      alert("Price updated successfully!");
+      setModulesMaster(prev => prev.map(m => m.id === selectedModule ? { 
+        ...m, 
+        price: priceNum,
+        test_mode_free: testModeFree,
+        test_mode_pro: testModePro,
+        test_mode_custom: testModeCustom
+      } : m));
+    }
   };
 
   const NavItem = ({ id, icon: Icon, label }: { id: string, icon: any, label: string }) => (
@@ -403,11 +547,9 @@ export default function SuperAdmin() {
                         <SelectValue placeholder="Select Module" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Retail POS">Retail & POS</SelectItem>
-                        <SelectItem value="Manufacturing ERP">Manufacturing ERP</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Health Care">Healthcare & Hospital</SelectItem>
-                        <SelectItem value="Hotel/Restaurant">Hotel & Restaurant</SelectItem>
+                        {modulesMaster.map(mod => (
+                           <SelectItem key={mod.id} value={mod.id}>{mod.module_name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     
@@ -439,8 +581,8 @@ export default function SuperAdmin() {
 
                 <Card className="lg:col-span-2 dark:bg-slate-900 dark:border-slate-800">
                   <CardHeader className="flex flex-row items-center justify-between border-b dark:border-slate-800 pb-4">
-                    <CardTitle className="dark:text-white">Editing Plans for: {selectedModule}</CardTitle>
-                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">
+                    <CardTitle className="dark:text-white">Editing Plans for: {modulesMaster.find(m => m.id === selectedModule)?.module_name}</CardTitle>
+                    <Button onClick={handleUpdatePricing} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">
                       Update Live Pricing
                     </Button>
                   </CardHeader>
@@ -450,9 +592,18 @@ export default function SuperAdmin() {
                       {/* Free Plan Edit */}
                       <div className="p-6 space-y-4">
                         <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Free Plan</h3>
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+                          <input 
+                            type="checkbox" 
+                            checked={testModeFree} 
+                            onChange={e => setTestModeFree(e.target.checked)} 
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          Enable ₹1 Testing Mode
+                        </label>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-500">Price (₹)</label>
-                          <Input defaultValue="1" className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
+                          <Input defaultValue="0" disabled className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-500">Validity</label>
@@ -475,9 +626,22 @@ export default function SuperAdmin() {
                       {/* Pro Plan Edit */}
                       <div className="p-6 space-y-4">
                         <h3 className="text-lg font-bold text-primary">Pro Plan</h3>
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+                          <input 
+                            type="checkbox" 
+                            checked={testModePro} 
+                            onChange={e => setTestModePro(e.target.checked)} 
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          Enable ₹1 Testing Mode
+                        </label>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-500">Price (₹)</label>
-                          <Input defaultValue="999" className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
+                          <Input 
+                            value={editingPrice} 
+                            onChange={(e) => setEditingPrice(e.target.value)} 
+                            className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
+                          />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-500">Validity</label>
@@ -500,6 +664,15 @@ export default function SuperAdmin() {
                       {/* Custom Plan Edit */}
                       <div className="p-6 space-y-4">
                         <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Custom/Enterprise</h3>
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+                          <input 
+                            type="checkbox" 
+                            checked={testModeCustom} 
+                            onChange={e => setTestModeCustom(e.target.checked)} 
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          Enable ₹1 Testing Mode
+                        </label>
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-slate-500">Button Text</label>
                           <Input defaultValue="Contact Sales" className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
@@ -586,6 +759,9 @@ export default function SuperAdmin() {
                             <div className="flex justify-end gap-2">
                               <Button variant="ghost" size="icon" title="Impersonate (Login as Merchant)" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30">
                                 <Users size={18} />
+                              </Button>
+                              <Button variant="ghost" size="icon" title="Module Access" onClick={() => handleOpenModulesModal(merchant)} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
+                                <Settings size={18} />
                               </Button>
                               <Button variant="ghost" size="icon" title="Edit Staff" className="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
                                 <Edit size={18} />
@@ -807,6 +983,52 @@ export default function SuperAdmin() {
 
         </div>
       </main>
+
+      {/* Module Access Modal */}
+      {selectedMerchantForModules && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedMerchantForModules(null)}></div>
+          <Card className="relative w-full max-w-2xl shadow-xl z-10 dark:bg-slate-900 border-0 max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between border-b dark:border-slate-800 shrink-0">
+              <CardTitle className="text-xl">
+                Module Access Matrix - {selectedMerchantForModules.name}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setSelectedMerchantForModules(null)}>
+                <X size={20} />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-6 overflow-y-auto">
+              <div className="space-y-4">
+                {modulesMaster.map(module => {
+                  const sub = merchantSubscriptions.find(s => s.module_id === module.id);
+                  const status = sub?.status || 'Inactive';
+                  const isActive = status === 'Active';
+                  return (
+                    <div key={module.id} className="flex items-center justify-between p-4 border dark:border-slate-800 rounded-lg bg-white dark:bg-slate-950">
+                      <div>
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{module.module_name}</h4>
+                        <p className="text-sm text-slate-500">{module.description}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isActive ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {status}
+                        </span>
+                        <button 
+                          onClick={() => toggleModuleAccess(module.id, status)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 }

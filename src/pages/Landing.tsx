@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Factory, GraduationCap, Stethoscope, Utensils, Truck, Wrench, Sprout, Check, Facebook, Twitter, Linkedin, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
@@ -7,13 +7,105 @@ import { Input } from '@/src/components/ui/input';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
 import { modulesData, publicAppFeature, pricingData } from '../data';
+import { getSupabaseClient } from '../lib/supabase';
+import { ModuleMaster } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [selectedModule, setSelectedModule] = useState(modulesData[0].id);
+  const { user } = useAuth();
+  const [selectedModule, setSelectedModule] = useState('retail');
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', inquiryType: '' });
+  const [modulesList, setModulesList] = useState<ModuleMaster[]>([]);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [activeSubscriptions, setActiveSubscriptions] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchSubscriptions = async () => {
+      if (user) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data } = await supabase.from('merchant_subscriptions')
+            .select('module_id')
+            .eq('merchant_id', user.id)
+            .eq('status', 'Active');
+          if (data) {
+            setActiveSubscriptions(new Set(data.map(s => s.module_id)));
+          }
+        }
+      }
+    };
+    fetchSubscriptions();
+  }, [user]);
+
+  const hasActiveSubscription = activeSubscriptions.has(selectedModule);
+
+  const handleCheckoutClick = (plan: string) => {
+    if (hasActiveSubscription) {
+      alert("You already have an active subscription for this module.");
+      return;
+    }
+    navigate(`/checkout?module=${encodeURIComponent(selectedModule)}&plan=${plan}`);
+  };
+
+  useEffect(() => {
+    const fetchModules = async () => {
+      const fallbackModules = [
+        { id: 'retail', module_name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
+        { id: 'manufacturing', module_name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
+        { id: 'education', module_name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
+        { id: 'healthcare', module_name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
+        { id: 'hospitality', module_name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
+        { id: 'transport', module_name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
+        { id: 'services', module_name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
+        { id: 'agriculture', module_name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
+      ];
+
+      let loadedModules = fallbackModules;
+
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data, error } = await supabase.from('modules_master').select('*').order('module_name');
+          if (error && error.code !== 'PGRST205' && error.code !== '42P01') {
+             console.warn("Error fetching modules_master:", error);
+          }
+          if (data && data.length > 0) {
+            if (data.length < 8) {
+               const existingIds = new Set(data.map(m => m.id));
+               const missingModules = fallbackModules.filter(m => !existingIds.has(m.id));
+               loadedModules = [...data, ...missingModules].sort((a, b) => (a.module_name || '').localeCompare(b.module_name || ''));
+            } else {
+               loadedModules = data;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Exception in fetchModules:", e);
+      }
+      
+      setModulesList(loadedModules as any[]);
+      
+      const prices: Record<string, number> = {};
+      loadedModules.forEach(m => {
+        prices[m.id] = Number(m.price);
+      });
+      setLivePrices(prices);
+    };
+    fetchModules();
+  }, []);
 
   const currentPricing = pricingData[selectedModule];
+  const livePriceForModule = livePrices[selectedModule] || 999;
+  
+  const selectedModuleData = modulesList.find(m => m.id === selectedModule);
+  const testModeFree = selectedModuleData?.test_mode_free ?? false;
+  const testModePro = selectedModuleData?.test_mode_pro ?? false;
+  const testModeCustom = selectedModuleData?.test_mode_custom ?? false;
+
+  const displayPriceFree = testModeFree ? '₹1' : '₹0';
+  const displayPricePro = testModePro ? '₹1' : `₹${livePriceForModule}`;
+  const displayPriceCustom = testModeCustom ? '₹1' : 'Custom';
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,8 +254,8 @@ export default function Landing() {
                   <SelectValue placeholder="Select Module" />
                 </SelectTrigger>
                 <SelectContent>
-                  {modulesData.map(mod => (
-                    <SelectItem key={mod.id} value={mod.id}>{mod.title}</SelectItem>
+                  {modulesList.map(mod => (
+                    <SelectItem key={mod.id} value={mod.id}>{mod.module_name || (mod as any).title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -177,7 +269,7 @@ export default function Landing() {
                 <CardHeader className="text-center pb-8 pt-8 border-b border-slate-100">
                   <CardTitle className="text-2xl text-slate-800">Free Plan</CardTitle>
                   <div className="mt-4 flex justify-center items-baseline text-4xl font-extrabold text-slate-900">
-                    ₹1<span className="text-base font-medium text-slate-500 ml-1">/ setup</span>
+                    {displayPriceFree}<span className="text-base font-medium text-slate-500 ml-1">/ setup</span>
                   </div>
                   <p className="text-sm text-slate-500 mt-2">For Single User</p>
                 </CardHeader>
@@ -190,8 +282,8 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Button variant="outline" className="w-full h-12 text-lg border-2 hover:bg-slate-50" onClick={() => navigate(`/checkout?module=${encodeURIComponent(selectedModule)}&plan=Free`)}>
-                    Get Started Free
+                  <Button variant="outline" className="w-full h-12 text-lg border-2 hover:bg-slate-50" onClick={() => handleCheckoutClick('Free')} disabled={hasActiveSubscription}>
+                    {hasActiveSubscription ? 'Already Subscribed' : 'Get Started Free'}
                   </Button>
                 </CardContent>
               </Card>
@@ -204,7 +296,7 @@ export default function Landing() {
                 <CardHeader className="text-center pb-8 pt-10 border-b border-slate-100">
                   <CardTitle className="text-2xl text-primary">Pro Plan</CardTitle>
                   <div className="mt-4 flex justify-center items-baseline text-4xl font-extrabold text-slate-900">
-                    ₹999<span className="text-base font-medium text-slate-500 ml-1">/ month</span>
+                    {displayPricePro}<span className="text-base font-medium text-slate-500 ml-1">/ month</span>
                   </div>
                   <p className="text-sm text-slate-500 mt-2">Advanced Features & Multi-User</p>
                 </CardHeader>
@@ -217,8 +309,8 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => navigate(`/checkout?module=${encodeURIComponent(selectedModule)}&plan=Pro`)}>
-                    Select Pro
+                  <Button className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-all" onClick={() => handleCheckoutClick('Pro')} disabled={hasActiveSubscription}>
+                    {hasActiveSubscription ? 'Already Subscribed' : 'Select Pro'}
                   </Button>
                 </CardContent>
               </Card>
@@ -228,7 +320,7 @@ export default function Landing() {
                 <CardHeader className="text-center pb-8 pt-8 border-b border-slate-100">
                   <CardTitle className="text-2xl text-slate-800">Enterprise</CardTitle>
                   <div className="mt-4 flex justify-center items-baseline text-4xl font-extrabold text-slate-900">
-                    Custom
+                    {displayPriceCustom}
                   </div>
                   <p className="text-sm text-slate-500 mt-2">For Large Enterprises</p>
                 </CardHeader>
@@ -241,8 +333,8 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Button variant="secondary" className="w-full h-12 text-lg hover:bg-slate-200" onClick={() => navigate(`/checkout?module=${encodeURIComponent(selectedModule)}&plan=Custom`)}>
-                    Contact Sales
+                  <Button variant="secondary" className="w-full h-12 text-lg hover:bg-slate-200" onClick={() => handleCheckoutClick('Custom')} disabled={hasActiveSubscription}>
+                    {hasActiveSubscription ? 'Already Subscribed' : 'Contact Sales'}
                   </Button>
                 </CardContent>
               </Card>
