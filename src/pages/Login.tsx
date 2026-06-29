@@ -65,8 +65,8 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-center items-center p-4">
       <div className="mb-8 flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-2xl">B</div>
-        <span className="text-3xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+        <img src="/logolight.png" alt="BahiBox Logo" className="h-28 md:h-36 dark:hidden object-contain" />
+        <img src="/logodark.png" alt="BahiBox Logo" className="h-28 md:h-36 hidden dark:block object-contain" />
       </div>
 
       <Card className="w-full max-w-md">

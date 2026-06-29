@@ -344,15 +344,19 @@ export default function SuperAdmin() {
     <div className={`min-h-screen flex ${darkMode ? 'dark bg-slate-950 text-slate-50' : 'bg-slate-50 text-slate-900'}`}>
       
       {/* Sidebar */}
-      <aside className={`transition-all duration-300 z-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 ${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col sticky top-0 h-screen overflow-y-auto`}>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
+      <aside className={`transition-all duration-300 z-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 ${sidebarOpen ? 'w-64' : 'w-28'} flex flex-col sticky top-0 h-screen overflow-y-auto`}>
+        <div className="h-28 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
           {sidebarOpen ? (
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">B</div>
-              <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">Master Admin</span>
+              <img src="/logolight.png" alt="BahiBox Logo" className="h-24 dark:hidden object-contain" />
+              <img src="/logodark.png" alt="BahiBox Logo" className="h-24 hidden dark:block object-contain" />
+              <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">Admin</span>
             </div>
           ) : (
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold mx-auto cursor-pointer" onClick={() => navigate('/')}>B</div>
+            <div className="flex justify-center w-full cursor-pointer" onClick={() => navigate('/')}>
+              <img src="/logolight.png" alt="B" className="h-24 w-24 object-cover object-left dark:hidden" />
+              <img src="/logodark.png" alt="B" className="h-24 w-24 object-cover object-left hidden dark:block" />
+            </div>
           )}
           {sidebarOpen && (
             <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md lg:hidden">
@@ -389,7 +393,7 @@ export default function SuperAdmin() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-28 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-4 flex-1">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hidden lg:block">
               <Menu size={20} />

@@ -360,8 +360,8 @@ export default function MerchantDashboard() {
                   </>
                 ) : (
                   <>
-                    <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg">B</div>
-                    <span className="text-xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+                    <img src="/logolight.png" alt="BahiBox Logo" className="h-24 dark:hidden object-contain" />
+                    <img src="/logodark.png" alt="BahiBox Logo" className="h-24 hidden dark:block object-contain" />
                   </>
                 )}
               </div>
@@ -476,7 +476,7 @@ export default function MerchantDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-hidden flex flex-col">
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between" style={tenant ? { borderBottomColor: tenant.primary_color } : {}}>
+        <header className="h-28 bg-white border-b border-slate-200 px-6 flex items-center justify-between" style={tenant ? { borderBottomColor: tenant.primary_color } : {}}>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsMenuOpen(true)}
@@ -487,11 +487,14 @@ export default function MerchantDashboard() {
             </button>
             {tenant ? (
               <div className="flex items-center gap-2">
-                 <img src={tenant.logo_url} alt="Logo" className="w-8 h-8 rounded-full object-cover" />
-                 <span className="text-lg font-extrabold tracking-tight text-slate-900">{tenant.brand_name} POS</span>
+                 <img src={tenant.logo_url} alt="Logo" className="w-16 h-16 rounded-full object-cover" />
+                 <span className="text-xl font-extrabold tracking-tight text-slate-900">{tenant.brand_name} POS</span>
               </div>
             ) : (
-              <span className="text-lg font-extrabold tracking-tight text-slate-900">BahiBox POS</span>
+              <div className="flex items-center gap-2">
+                <img src="/logolight.png" alt="BahiBox Logo" className="h-24 dark:hidden object-contain" />
+                <img src="/logodark.png" alt="BahiBox Logo" className="h-24 hidden dark:block object-contain" />
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 relative">

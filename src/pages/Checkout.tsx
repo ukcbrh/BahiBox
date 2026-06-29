@@ -297,8 +297,9 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col items-center py-12 px-4">
       <div className="w-full max-w-4xl flex items-center gap-3 mb-8 cursor-pointer" onClick={() => navigate('/')}>
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl">B</div>
-        <span className="text-2xl font-extrabold tracking-tight text-slate-900">BahiBox Checkout</span>
+        <img src="/logolight.png" alt="BahiBox Logo" className="h-24 md:h-32 dark:hidden object-contain" />
+        <img src="/logodark.png" alt="BahiBox Logo" className="h-24 md:h-32 hidden dark:block object-contain" />
+        <span className="text-2xl font-extrabold tracking-tight text-slate-900 ml-2">Checkout</span>
       </div>
 
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">

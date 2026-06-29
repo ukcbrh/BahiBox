@@ -17,10 +17,10 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
-      <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
+      <header className="h-28 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl">B</div>
-          <span className="text-2xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+          <img src="/logolight.png" alt="BahiBox Logo" className="h-24 md:h-28 dark:hidden object-contain py-2" />
+          <img src="/logodark.png" alt="BahiBox Logo" className="h-24 md:h-28 hidden dark:block object-contain py-2" />
         </div>
       </header>
 

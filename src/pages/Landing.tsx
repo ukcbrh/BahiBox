@@ -120,10 +120,10 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
       {/* Sticky Header */}
-      <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-all">
+      <header className="h-28 bg-white border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-all">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => scrollToSection('home')}>
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl">B</div>
-          <span className="text-2xl font-extrabold tracking-tight text-slate-900">BahiBox</span>
+          <img src="/logolight.png" alt="BahiBox Logo" className="h-24 md:h-28 dark:hidden object-contain py-2" />
+          <img src="/logodark.png" alt="BahiBox Logo" className="h-24 md:h-28 hidden dark:block object-contain py-2" />
         </div>
         
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
@@ -408,8 +408,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl">B</div>
-                <span className="text-2xl font-extrabold tracking-tight text-white">BahiBox</span>
+                <img src="/logodark.png" alt="BahiBox Logo" className="h-36 object-contain" />
               </div>
               <p className="text-slate-400 mb-6">
                 The Ultimate B2B + B2C Super-App Ecosystem for modern India.
