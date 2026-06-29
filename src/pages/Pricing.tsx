@@ -3,8 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
 import { Check } from 'lucide-react';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Pricing() {
+  useDocumentTitle('BahiBox | Pricing');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const moduleName = searchParams.get('module') || 'General';

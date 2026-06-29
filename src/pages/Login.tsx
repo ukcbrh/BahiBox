@@ -5,8 +5,10 @@ import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import { ModuleType } from '../types';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Login() {
+  useDocumentTitle('BahiBox | Login');
   const navigate = useNavigate();
   const location = useLocation();
 

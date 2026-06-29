@@ -5,8 +5,10 @@ import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { getSupabaseClient } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Checkout() {
+  useDocumentTitle('BahiBox | Checkout');
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();

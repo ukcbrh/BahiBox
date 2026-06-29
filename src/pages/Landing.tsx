@@ -10,8 +10,10 @@ import { modulesData, publicAppFeature, fallbackModules } from '../data';
 import { getSupabaseClient } from '../lib/supabase';
 import { ModuleMaster } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function Landing() {
+  useDocumentTitle('BahiBox');
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedModule, setSelectedModule] = useState('retail');

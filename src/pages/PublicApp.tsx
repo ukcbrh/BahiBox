@@ -8,6 +8,7 @@ import { useTenant } from '../contexts/TenantContext';
 import { Button } from '@/src/components/ui/button';
 import { Product } from '@/src/types';
 import { getSupabaseClient } from '../lib/supabase';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function PublicApp() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function PublicApp() {
   const [products, setProducts] = useState<Product[]>([]);
   const { user } = useAuth();
   const { tenant, resetTenant } = useTenant();
+  useDocumentTitle(tenant ? `${tenant.brand_name}` : 'BahiBox | Public App');
   
   const userName = user?.displayName || user?.email?.split('@')[0] || 'Guest User';
   const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();

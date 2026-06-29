@@ -33,6 +33,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import { useAuth } from '../contexts/AuthContext';
 import { fallbackModules } from '../data';
 import { getSupabaseClient } from '../lib/supabase';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 // Mock Data
 const revenueData = [
@@ -62,6 +63,7 @@ const ticketsList = [
 ];
 
 export default function SuperAdmin() {
+  useDocumentTitle('BahiBox | Super Admin');
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');

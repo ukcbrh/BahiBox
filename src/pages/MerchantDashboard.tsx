@@ -58,6 +58,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTenant } from '../contexts/TenantContext';
 import { getSupabaseClient } from '../lib/supabase';
 import { useModules } from '../hooks/useModules';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export interface OnlineOrder {
   id: string;
@@ -85,6 +86,7 @@ export default function MerchantDashboard() {
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   
   const [activeModuleState, setActiveModuleState] = useState<ModuleType>(initialModule as ModuleType);
+  useDocumentTitle(`BahiBox | ${activeModuleState}`);
   const { modules: moduleMaster, subscriptions: merchantSubscriptions, loading: modulesLoading, refreshSubscriptions } = useModules(user?.id);
   const [isModuleMenuOpen, setIsModuleMenuOpen] = useState(false);
 
