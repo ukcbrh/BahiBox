@@ -104,6 +104,9 @@ export interface ModuleMaster {
   test_mode_free?: boolean;
   test_mode_pro?: boolean;
   test_mode_custom?: boolean;
+  features_free?: string[];
+  features_pro?: string[];
+  features_custom?: string[];
 }
 
 export interface MerchantSubscription {

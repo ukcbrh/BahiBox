@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import MerchantDashboard from './pages/MerchantDashboard';
@@ -21,6 +22,7 @@ export default function App() {
     <TenantProvider>
       <AuthProvider>
         <BrowserRouter>
+          <Toaster position="top-center" />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />

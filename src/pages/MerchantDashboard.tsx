@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast, Toaster } from 'sonner';
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -137,7 +138,7 @@ export default function MerchantDashboard() {
          status: 'Active'
        }, { onConflict: 'merchant_id, module_id' });
     }
-    alert('Payment successful! Your plan has been upgraded.');
+    toast.success('Payment successful! Your plan has been upgraded.');
     setShowPaymentModal(false);
     setIsProcessingPayment(false);
     
@@ -166,7 +167,7 @@ export default function MerchantDashboard() {
           status: 'Active'
         }, { onConflict: 'merchant_id, module_id' });
       }
-      alert('Module Activated Successfully!');
+      toast.success(`${mod.name} Activated Successfully!`);
       setShowActivationModal(false);
       
       // Switch to the newly activated module
@@ -398,40 +399,55 @@ export default function MerchantDashboard() {
               ))}
 
               <div className="mt-6 mb-2">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">All Modules</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">My Subscriptions</p>
                 <div className="space-y-1">
-                  {moduleMaster.map((mod) => {
-                    const sub = merchantSubscriptions.find(s => s.module_id === mod.id);
-                    const isSubscribed = sub && sub.status === 'Active';
-                    
+                  {moduleMaster.filter(mod => merchantSubscriptions.some(s => s.module_id === mod.id && s.status === 'Active')).map((mod) => {
                     const isActive = activeModuleState === mod.name;
                     return (
                       <button
                         key={mod.id}
                         onClick={() => {
-                          if (isSubscribed) {
-                            setActiveModuleState(mod.name as ModuleType);
-                            setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
-                            setIsMenuOpen(false);
-                          } else {
-                            setIsMenuOpen(false);
-                            setSelectedModuleToActivate(mod);
-                            setShowActivationModal(true);
-                          }
+                          setActiveModuleState(mod.name as ModuleType);
+                          setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
+                          setIsMenuOpen(false);
                         }}
                         className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
                           isActive
                             ? 'bg-slate-100 text-slate-900'
-                            : !isSubscribed
-                              ? 'text-slate-400 hover:bg-slate-50'
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-6 flex justify-center">
-                            {isActive ? <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} /> : (!isSubscribed && <Lock size={14} className="text-slate-300" />)}
+                            {isActive && <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} />}
                           </div>
-                          <span className={!isSubscribed ? 'line-through opacity-70' : ''}>{mod.name}</span>
+                          <span>{mod.name}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 mb-2">
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">App Store</p>
+                <div className="space-y-1">
+                  {moduleMaster.filter(mod => !merchantSubscriptions.some(s => s.module_id === mod.id && s.status === 'Active')).map((mod) => {
+                    return (
+                      <button
+                        key={mod.id}
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setSelectedModuleToActivate(mod);
+                          setShowActivationModal(true);
+                        }}
+                        className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-slate-400 hover:bg-slate-50 hover:text-slate-900`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 flex justify-center">
+                            <Lock size={14} className="text-slate-300" />
+                          </div>
+                          <span>{mod.name}</span>
                         </div>
                       </button>
                     );
@@ -623,7 +639,17 @@ export default function MerchantDashboard() {
                          <h3 className="font-bold text-lg text-slate-900">Free Plan</h3>
                          <span className="text-xl font-black text-slate-900">₹{selectedModuleToActivate.test_mode_free ? '1' : '0'}</span>
                       </div>
-                      <p className="text-sm text-slate-500 mb-4">Basic features to get you started.</p>
+                      <div className="text-sm text-slate-500 mb-4 space-y-1">
+                        {selectedModuleToActivate.features_free?.map((feature, i) => (
+                           <div key={i} className="flex items-center gap-2">
+                              <CheckCircle2 size={14} className="text-emerald-500" />
+                              <span>{feature}</span>
+                           </div>
+                        ))}
+                        {(!selectedModuleToActivate.features_free || selectedModuleToActivate.features_free.length === 0) && (
+                          <p>Basic features to get you started.</p>
+                        )}
+                      </div>
                       <button 
                          onClick={() => handleActivateFreePlan(selectedModuleToActivate)}
                          disabled={isActivating}
@@ -640,7 +666,17 @@ export default function MerchantDashboard() {
                          <h3 className="font-bold text-lg text-primary">Pro Plan</h3>
                          <span className="text-xl font-black text-primary">₹{selectedModuleToActivate.test_mode_pro ? '1' : selectedModuleToActivate.price || 999}<span className="text-sm text-slate-500 font-normal">/mo</span></span>
                       </div>
-                      <p className="text-sm text-slate-500 mb-4">Advanced features for growing businesses.</p>
+                      <div className="text-sm text-slate-500 mb-4 space-y-1">
+                        {selectedModuleToActivate.features_pro?.map((feature, i) => (
+                           <div key={i} className="flex items-center gap-2">
+                              <CheckCircle2 size={14} className="text-primary" />
+                              <span className="font-medium">{feature}</span>
+                           </div>
+                        ))}
+                        {(!selectedModuleToActivate.features_pro || selectedModuleToActivate.features_pro.length === 0) && (
+                          <p>Advanced features for growing businesses.</p>
+                        )}
+                      </div>
                       <button 
                          onClick={() => {
                             setPaymentModule(selectedModuleToActivate.id);
@@ -665,7 +701,17 @@ export default function MerchantDashboard() {
                          <h3 className="font-bold text-lg text-slate-900">Custom</h3>
                          <span className="text-xl font-black text-slate-900">Contact Us</span>
                       </div>
-                      <p className="text-sm text-slate-500 mb-4">Enterprise-grade solutions tailored for you.</p>
+                      <div className="text-sm text-slate-500 mb-4 space-y-1">
+                        {selectedModuleToActivate.features_custom?.map((feature, i) => (
+                           <div key={i} className="flex items-center gap-2">
+                              <CheckCircle2 size={14} className="text-slate-400" />
+                              <span>{feature}</span>
+                           </div>
+                        ))}
+                        {(!selectedModuleToActivate.features_custom || selectedModuleToActivate.features_custom.length === 0) && (
+                          <p>Enterprise-grade solutions tailored for you.</p>
+                        )}
+                      </div>
                       <button 
                          onClick={() => {
                             if (selectedModuleToActivate.test_mode_custom) {

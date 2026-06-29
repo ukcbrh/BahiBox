@@ -76,45 +76,85 @@ export const publicAppFeature = {
   bg: 'bg-primary/10'
 };
 
-export const pricingData: Record<string, { free: string[], pro: string[], custom: string[] }> = {
-  'retail': {
-    free: ['Single User Access', 'Basic Billing', 'Up to 50 Products', 'Standard Support'],
-    pro: ['Unlimited Users', 'Advanced Inventory & Alerts', 'Customer Loyalty Program', 'Public App Listing'],
-    custom: ['Multi-store Management', 'Custom Reporting', 'Dedicated Account Manager', 'SLA Guarantee']
+export const fallbackModules = [
+  { 
+    id: 'retail', 
+    name: 'Retail POS', 
+    description: 'Point of sale and inventory', 
+    icon: 'ShoppingCart', 
+    price: 49.00,
+    features_free: ['Single User Access', 'Basic Billing', 'Up to 50 Products', 'Standard Support'],
+    features_pro: ['Unlimited Users', 'Advanced Inventory & Alerts', 'Customer Loyalty Program', 'Public App Listing'],
+    features_custom: ['Multi-store Management', 'Custom Reporting', 'Dedicated Account Manager', 'SLA Guarantee']
   },
-  'manufacturing': {
-    free: ['Basic Production Tracking', '1 Workshop', 'Limited Raw Materials'],
-    pro: ['BOM Management', 'Labor Tracking', 'Automatic Stock Updates', 'Multiple Warehouses'],
-    custom: ['Custom Machine Integration', 'Advanced Analytics', 'On-premises Deployment', 'API Access']
+  { 
+    id: 'manufacturing', 
+    name: 'Manufacturing', 
+    description: 'Production and tracking', 
+    icon: 'Factory', 
+    price: 199.00,
+    features_free: ['Basic Production Tracking', '1 Workshop', 'Limited Raw Materials'],
+    features_pro: ['BOM Management', 'Labor Tracking', 'Automatic Stock Updates', 'Multiple Warehouses'],
+    features_custom: ['Custom Machine Integration', 'Advanced Analytics', 'On-premises Deployment', 'API Access']
   },
-  'education': {
-    free: ['Up to 100 Students', 'Basic Attendance', 'Fee Tracking'],
-    pro: ['Smart Admissions', 'Dynamic Syllabus Tracker', 'Live Bus Tracking', 'Parents Portal'],
-    custom: ['Multi-branch Management', 'Custom ERP Integration', 'Biometric Attendance', 'Dedicated Support']
+  { 
+    id: 'education', 
+    name: 'Education', 
+    description: 'School management', 
+    icon: 'GraduationCap', 
+    price: 149.00,
+    features_free: ['Up to 100 Students', 'Basic Attendance', 'Fee Tracking'],
+    features_pro: ['Smart Admissions', 'Dynamic Syllabus Tracker', 'Live Bus Tracking', 'Parents Portal'],
+    features_custom: ['Multi-branch Management', 'Custom ERP Integration', 'Biometric Attendance', 'Dedicated Support']
   },
-  'healthcare': {
-    free: ['Basic OPD', 'Single Doctor', 'Limited Patient Records'],
-    pro: ['Pharmacy Inventory', 'Lab Report Management', 'Bed Tracking', 'Online Appointments'],
-    custom: ['Custom HIS Integration', 'NABH Compliance', 'Multi-specialty Setup', 'Dedicated Server']
+  { 
+    id: 'healthcare', 
+    name: 'Healthcare', 
+    description: 'Clinic and patient management', 
+    icon: 'Stethoscope', 
+    price: 299.00,
+    features_free: ['Basic OPD', 'Single Doctor', 'Limited Patient Records'],
+    features_pro: ['Pharmacy Inventory', 'Lab Report Management', 'Bed Tracking', 'Online Appointments'],
+    features_custom: ['Custom HIS Integration', 'NABH Compliance', 'Multi-specialty Setup', 'Dedicated Server']
   },
-  'hospitality': {
-    free: ['Basic Table Management', 'Limited Menu Items', 'Simple Billing'],
-    pro: ['Kitchen Display System (KDS)', 'Room Booking', 'Self-ordering Kiosk', 'Inventory Tracking'],
-    custom: ['Custom Chain Management', 'Loyalty Program Integration', 'API Access', 'SLA Guarantee']
+  { 
+    id: 'hospitality', 
+    name: 'Hospitality', 
+    description: 'Hotel and restaurant', 
+    icon: 'Hotel', 
+    price: 99.00,
+    features_free: ['Basic Table Management', 'Limited Menu Items', 'Simple Billing'],
+    features_pro: ['Kitchen Display System (KDS)', 'Room Booking', 'Self-ordering Kiosk', 'Inventory Tracking'],
+    features_custom: ['Custom Chain Management', 'Loyalty Program Integration', 'API Access', 'SLA Guarantee']
   },
-  'transport': {
-    free: ['Basic Vehicle Tracking', 'Single Owner', 'Simple Trip Logs'],
-    pro: ['Fleet Tracking', 'Driver Wallet', 'Part-load Management', 'Expense Tracking'],
-    custom: ['Custom GPS Integration', 'Multi-branch Operations', 'Advanced Analytics', 'Dedicated Support']
+  { 
+    id: 'transport', 
+    name: 'Transport', 
+    description: 'Fleet and logistics', 
+    icon: 'Truck', 
+    price: 149.00,
+    features_free: ['Basic Vehicle Tracking', 'Single Owner', 'Simple Trip Logs'],
+    features_pro: ['Fleet Tracking', 'Driver Wallet', 'Part-load Management', 'Expense Tracking'],
+    features_custom: ['Custom GPS Integration', 'Multi-branch Operations', 'Advanced Analytics', 'Dedicated Support']
   },
-  'services': {
-    free: ['Basic Appointments', 'Single Service Provider', 'Simple Invoicing'],
-    pro: ['Online Booking', 'Customer Management', 'Payment Integration', 'Public App Listing'],
-    custom: ['Custom Agency Management', 'Staff Scheduling', 'API Access', 'SLA Guarantee']
+  { 
+    id: 'services', 
+    name: 'Services', 
+    description: 'Service and booking', 
+    icon: 'Wrench', 
+    price: 49.00,
+    features_free: ['Basic Appointments', 'Single Service Provider', 'Simple Invoicing'],
+    features_pro: ['Online Booking', 'Customer Management', 'Payment Integration', 'Public App Listing'],
+    features_custom: ['Custom Agency Management', 'Staff Scheduling', 'API Access', 'SLA Guarantee']
   },
-  'agriculture': {
-    free: ['Weather Alerts', 'Basic Crop Diary', 'Limited Expense Tracking'],
-    pro: ['Labor Payment Management', 'Smart Crop Calendar', 'KCC/AIF Loan Tracking', 'Inventory Management'],
-    custom: ['FPO/FPC Management', 'Custom Supply Chain', 'Advanced Analytics', 'Dedicated Account Manager']
+  { 
+    id: 'agriculture', 
+    name: 'Agriculture', 
+    description: 'Farm and crop management', 
+    icon: 'Tractor', 
+    price: 79.00,
+    features_free: ['Weather Alerts', 'Basic Crop Diary', 'Limited Expense Tracking'],
+    features_pro: ['Labor Payment Management', 'Smart Crop Calendar', 'KCC/AIF Loan Tracking', 'Inventory Management'],
+    features_custom: ['FPO/FPC Management', 'Custom Supply Chain', 'Advanced Analytics', 'Dedicated Account Manager']
   }
-};
+];

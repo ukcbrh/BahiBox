@@ -6,7 +6,7 @@ import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { Textarea } from '@/src/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
-import { modulesData, publicAppFeature, pricingData } from '../data';
+import { modulesData, publicAppFeature, fallbackModules } from '../data';
 import { getSupabaseClient } from '../lib/supabase';
 import { ModuleMaster } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -50,17 +50,6 @@ export default function Landing() {
 
   useEffect(() => {
     const fetchModules = async () => {
-      const fallbackModules = [
-        { id: 'retail', name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
-        { id: 'manufacturing', name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
-        { id: 'education', name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
-        { id: 'healthcare', name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
-        { id: 'hospitality', name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
-        { id: 'transport', name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
-        { id: 'services', name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
-        { id: 'agriculture', name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
-      ];
-
       let loadedModules = fallbackModules;
 
       try {
@@ -95,10 +84,16 @@ export default function Landing() {
     fetchModules();
   }, []);
 
-  const currentPricing = pricingData[selectedModule];
-  const livePriceForModule = livePrices[selectedModule] || 999;
+  const selectedModuleData = modulesList.find(m => m.id === selectedModule) || fallbackModules.find(m => m.id === selectedModule);
   
-  const selectedModuleData = modulesList.find(m => m.id === selectedModule);
+  const currentPricing = {
+    free: selectedModuleData?.features_free || fallbackModules.find(m => m.id === selectedModule)?.features_free || [],
+    pro: selectedModuleData?.features_pro || fallbackModules.find(m => m.id === selectedModule)?.features_pro || [],
+    custom: selectedModuleData?.features_custom || fallbackModules.find(m => m.id === selectedModule)?.features_custom || [],
+  };
+
+  const livePriceForModule = livePrices[selectedModule] || selectedModuleData?.price || 999;
+  
   const testModeFree = selectedModuleData?.test_mode_free ?? false;
   const testModePro = selectedModuleData?.test_mode_pro ?? false;
   const testModeCustom = selectedModuleData?.test_mode_custom ?? false;

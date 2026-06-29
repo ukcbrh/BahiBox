@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/src/components/ui/textarea';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
+import { fallbackModules } from '../data';
 import { getSupabaseClient } from '../lib/supabase';
 
 // Mock Data
@@ -108,32 +109,30 @@ export default function SuperAdmin() {
         if (!supabase) return;
         
         let users: any[] = [];
-        const { data: merchantsData, error: merchantsError } = await supabase.from('users').select('*');
+        const { data: usersData, error: usersError } = await supabase.from('users').select('*');
+        const { data: merchantsData } = await supabase.from('merchants').select('*').catch(() => ({ data: [] })); // Optional
+        const { data: merchantSubs } = await supabase.from('merchant_subscriptions').select('*, modules_master(name)');
         
-        if (!merchantsError && merchantsData) {
-          users = merchantsData.map(doc => ({
-            id: doc.id,
-            ...doc,
-            name: doc.name || 'Unknown User',
-            type: doc.type || doc.module || 'Unknown Module',
-            location: doc.location || 'N/A',
-            status: doc.status || 'Active',
-            plan: doc.plan || 'Free Plan',
-            email: doc.email || 'N/A',
-            role: doc.role || 'merchant'
-          }));
+        if (!usersError && usersData) {
+          users = usersData.map(userRec => {
+            const merchantRec = merchantsData?.find((m: any) => m.id === userRec.id) || {};
+            const subs = merchantSubs?.filter(s => s.merchant_id === userRec.id) || [];
+            const activeSubs = subs.filter(s => s.status === 'Active');
+            return {
+              id: userRec.id,
+              ...userRec,
+              ...merchantRec, // Merge if exists
+              name: userRec.name || merchantRec.name || 'Unknown User',
+              email: userRec.email || merchantRec.email || 'N/A',
+              phone: userRec.phone || merchantRec.phone || 'N/A',
+              business_name: userRec.business_name || merchantRec.business_name || 'N/A',
+              status: userRec.status || merchantRec.status || 'Active',
+              plan: userRec.plan || merchantRec.plan || (activeSubs.some(s => s.plan_type === 'Pro') ? 'Pro Plan' : 'Free Plan'),
+              role: userRec.role || merchantRec.role || 'merchant',
+              activeModules: activeSubs.map(s => (s as any).modules_master?.name || s.module_id).join(', ') || 'None'
+            };
+          });
         }
-
-        const fallbackModules = [
-          { id: 'retail', name: 'Retail POS', description: 'Point of sale and inventory', icon: 'ShoppingCart', price: 49.00 },
-          { id: 'manufacturing', name: 'Manufacturing', description: 'Production and tracking', icon: 'Factory', price: 199.00 },
-          { id: 'education', name: 'Education', description: 'School management', icon: 'GraduationCap', price: 149.00 },
-          { id: 'healthcare', name: 'Healthcare', description: 'Clinic and patient management', icon: 'Stethoscope', price: 299.00 },
-          { id: 'hospitality', name: 'Hospitality', description: 'Hotel and restaurant', icon: 'Hotel', price: 99.00 },
-          { id: 'transport', name: 'Transport', description: 'Fleet and logistics', icon: 'Truck', price: 149.00 },
-          { id: 'services', name: 'Services', description: 'Service and booking', icon: 'Wrench', price: 49.00 },
-          { id: 'agriculture', name: 'Agriculture', description: 'Farm and crop management', icon: 'Tractor', price: 79.00 }
-        ];
 
         const { data: modulesData, error: modulesError } = await supabase.from('modules_master').select('*').order('name');
         
@@ -224,7 +223,7 @@ export default function SuperAdmin() {
       alert("No data available to export.");
       return;
     }
-    const headers = ["ID", "Name", "Email", "Role", "Module", "Location", "Plan", "Status"];
+    const headers = ["ID", "Name", "Email", "Phone", "Business Name", "Role", "Active Modules", "Plan", "Status"];
     const csvRows = [];
     csvRows.push(headers.join(","));
     
@@ -233,9 +232,10 @@ export default function SuperAdmin() {
         row.id,
         `"${row.name || ''}"`,
         `"${row.email || ''}"`,
+        `"${row.phone || ''}"`,
+        `"${row.business_name || ''}"`,
         `"${row.role || ''}"`,
-        `"${row.type || ''}"`,
-        `"${row.location || ''}"`,
+        `"${row.activeModules || ''}"`,
         `"${row.plan || ''}"`,
         `"${row.status || ''}"`
       ];
@@ -725,9 +725,9 @@ export default function SuperAdmin() {
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 font-medium">
                       <tr>
                         <th className="px-6 py-4">User ID & Name</th>
-                        <th className="px-6 py-4">Email</th>
+                        <th className="px-6 py-4">Contact & Business</th>
                         <th className="px-6 py-4">Role</th>
-                        <th className="px-6 py-4">Module</th>
+                        <th className="px-6 py-4">Active Modules</th>
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
@@ -739,13 +739,16 @@ export default function SuperAdmin() {
                             <div className="font-semibold text-slate-900 dark:text-white">{merchant.name}</div>
                             <div className="text-xs text-slate-500 font-mono" title={merchant.id}>{merchant.id.substring(0, 12)}...</div>
                           </td>
-                          <td className="px-6 py-4 dark:text-slate-300">{merchant.email}</td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm dark:text-slate-300">{merchant.business_name !== 'N/A' ? merchant.business_name : merchant.email}</div>
+                            <div className="text-xs text-slate-500">{merchant.phone !== 'N/A' ? merchant.phone : 'No Phone'}</div>
+                          </td>
                           <td className="px-6 py-4">
                             <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-xs font-medium uppercase">
                               {merchant.role}
                             </span>
                           </td>
-                          <td className="px-6 py-4 dark:text-slate-300">{merchant.type}</td>
+                          <td className="px-6 py-4 text-sm dark:text-slate-300 max-w-[200px] truncate" title={merchant.activeModules}>{merchant.activeModules}</td>
                           <td className="px-6 py-4">
                             <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                               merchant.status === 'Active' 
