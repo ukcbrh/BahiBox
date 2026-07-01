@@ -59,6 +59,18 @@ import { useTenant } from '../contexts/TenantContext';
 import { getSupabaseClient } from '../lib/supabase';
 import { useModules } from '../hooks/useModules';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import * as LucideIcons from 'lucide-react';
+import { TenantMenuResult } from '../db/database.types';
+
+import { StaffRolesView } from '../components/StaffRolesView';
+import { PermissionGate } from '../components/PermissionGate';
+import { WalletBalanceCard, LedgerHistoryTable } from '../components/WalletComponents';
+
+// Helper to render dynamic icon
+const DynamicIcon = ({ name, className, size = 20 }: { name: string, className?: string, size?: number }) => {
+  const IconComponent = (LucideIcons as any)[name] || LucideIcons.HelpCircle;
+  return <IconComponent className={className} size={size} />;
+};
 
 export interface OnlineOrder {
   id: string;
@@ -74,7 +86,7 @@ export interface OnlineOrder {
 export default function MerchantDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, userRole, activeModule: initialActiveModule, logout, loading } = useAuth();
+  const { user, userRole, activeModule: initialActiveModule, logout, loading, hasPermission, clearRole } = useAuth();
   const { tenant } = useTenant();
   
   const role = location.state?.role || userRole || 'admin';
@@ -91,6 +103,8 @@ export default function MerchantDashboard() {
   const [isModuleMenuOpen, setIsModuleMenuOpen] = useState(false);
 
   const [isDataInitialized, setIsDataInitialized] = useState(false);
+  const [dynamicMenu, setDynamicMenu] = useState<TenantMenuResult[]>([]);
+  const { currentTenantId, currentPermissions } = useAuth();
 
   const [showPaymentModal, setShowPaymentModal] = useState(location.state?.showPaymentModal || false);
   const [paymentAmount, setPaymentAmount] = useState(location.state?.amount || 0);
@@ -241,6 +255,36 @@ export default function MerchantDashboard() {
     return () => { isMounted = false; };
   }, [user]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMenu = async () => {
+      const supabase = getSupabaseClient();
+      if (supabase && user && currentTenantId) {
+        try {
+          const { data, error } = await supabase.rpc('get_tenant_menu', {
+            checking_tenant_id: currentTenantId,
+            checking_user_id: user.id
+          });
+          if (data && isMounted) {
+            setDynamicMenu(data);
+            if (data.length > 0) {
+              const currentTabExists = data.some((m: TenantMenuResult) => (m.item_key.split('.').pop() || m.item_key) === activeTab);
+              if (!currentTabExists) {
+                setActiveTab(data[0].item_key.split('.').pop() || data[0].item_key);
+              }
+            }
+          } else if (error) {
+            console.error("Failed to fetch dynamic menu:", error);
+          }
+        } catch (e) {
+          console.error("Error fetching dynamic menu:", e);
+        }
+      }
+    };
+    fetchMenu();
+    return () => { isMounted = false; };
+  }, [user, currentTenantId, currentPermissions]); // Re-fetch if permissions change
+
   if (loading || modulesLoading || !isDataInitialized) {
     return <div className="h-screen flex flex-col items-center justify-center">
       <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -251,68 +295,6 @@ export default function MerchantDashboard() {
   }
 
   if (!user) return null;
-
-  // Dynamic Nav Items based on ActiveModuleState
-  const getNavItems = () => {
-    switch (activeModuleState as string) {
-      case 'Education':
-        return [
-          { id: 'admin', label: 'Admin', icon: Users },
-          { id: 'academics', label: 'Academics', icon: FileText },
-          { id: 'support', label: 'Support', icon: Truck },
-          { id: 'automations', label: 'Automations', icon: CheckCircle2 },
-        ];
-      case 'Healthcare':
-        return [
-          { id: 'front-desk', label: 'Front Desk', icon: Users },
-          { id: 'emergency', label: 'Emergency & Ward', icon: Bed },
-          { id: 'pharmacy', label: 'Pharmacy & Labs', icon: Pill },
-          { id: 'accounts', label: 'Accounts', icon: Calculator },
-        ];
-      case 'Manufacturing':
-        return [
-          { id: 'dashboard', label: 'Role Dashboards', icon: LayoutDashboard },
-          { id: 'production', label: 'Production Flow', icon: Factory },
-          { id: 'hr', label: 'HR/Payroll', icon: Users },
-          { id: 'sales', label: 'Dynamic Sales', icon: Banknote },
-        ];
-      case 'Hospitality':
-        return [
-          { id: 'front-desk', label: 'Front Desk', icon: Bed },
-          { id: 'restaurant', label: 'Restaurant', icon: Utensils },
-          { id: 'kitchen', label: 'Kitchen (KDS)', icon: Clipboard },
-          { id: 'cloud-kitchen', label: 'Cloud Kitchen', icon: Cloud },
-        ];
-      case 'Transport':
-        return [
-          { id: 'master', label: 'Master Settings', icon: Settings },
-          { id: 'b2b', label: 'B2B & B2C', icon: Truck },
-          { id: 'finance', label: 'Finance', icon: Wallet },
-        ];
-      case 'Services':
-        return [
-          { id: 'categories', label: 'Categories', icon: FolderPlus },
-          { id: 'invoicing', label: 'Invoicing', icon: FileText },
-        ];
-      case 'Agriculture':
-        return [
-          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'farm', label: 'Farm & Inventory', icon: Sprout },
-          { id: 'finance', label: 'Finance', icon: Wallet },
-        ];
-      case 'Retail POS':
-      default:
-        return [
-          { id: 'pos', label: 'In-Store POS', icon: ShoppingCart },
-          { id: 'online', label: 'Online Order Desk', icon: Package },
-          { id: 'inventory', label: 'Retail Inventory', icon: Package },
-          { id: 'gst', label: 'GST & Tax', icon: Calculator },
-          { id: 'security', label: 'Security', icon: ScanLine },
-        ];
-    }
-  };
-  
-  const navItems = getNavItems();
 
   const handleLogout = async () => {
     try {
@@ -374,91 +356,63 @@ export default function MerchantDashboard() {
             </div>
 
             <div className="py-4 border-b border-slate-100 bg-slate-50/50 -mx-6 px-6">
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Active Module</p>
-              <p className="font-bold text-slate-800 text-sm">{activeModuleState}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Business Type</p>
+              <p className="font-bold text-slate-800 text-sm capitalize">{tenant?.business_type || 'Retail'}</p>
               <p className="text-xs text-slate-500 truncate mt-1">{user?.email || 'User'}</p>
             </div>
 
-            <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">Module Features</p>
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setIsMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                    activeTab === item.id 
-                      ? 'text-primary' 
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                  style={activeTab === item.id && tenant ? { backgroundColor: `${tenant.primary_color}1a`, color: tenant.primary_color } : activeTab === item.id ? { backgroundColor: 'var(--primary-10)', color: 'var(--primary)' } : {}}
-                >
-                  <item.icon size={18} />
-                  {item.label}
-                </button>
-              ))}
+            <nav className="flex-1 py-4 space-y-4 overflow-y-auto">
+              {/* Group items by module */}
+              {Array.from(new Set(dynamicMenu.map(m => m.module_id))).map(moduleId => {
+                const moduleItems = dynamicMenu.filter(m => m.module_id === moduleId);
+                if (moduleItems.length === 0) return null;
+                const moduleName = moduleItems[0].module_name;
 
-              <div className="mt-6 mb-2">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">My Subscriptions</p>
-                <div className="space-y-1">
-                  {moduleMaster.filter(mod => merchantSubscriptions.some(s => s.module_id === mod.id && s.status === 'Active')).map((mod) => {
-                    const isActive = activeModuleState === mod.name;
-                    return (
+                return (
+                  <div key={moduleId} className="space-y-1">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">{moduleName}</p>
+                    {moduleItems.map((item) => (
                       <button
-                        key={mod.id}
+                        key={item.item_id}
                         onClick={() => {
-                          setActiveModuleState(mod.name as ModuleType);
-                          setActiveTab(mod.name === 'Retail POS' ? 'pos' : 'dashboard');
+                          const tabId = item.item_key.split('.').pop() || item.item_key;
+                          setActiveTab(tabId);
                           setIsMenuOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                          isActive
-                            ? 'bg-slate-100 text-slate-900'
+                        className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                          activeTab === (item.item_key.split('.').pop() || item.item_key)
+                            ? 'text-primary' 
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                         }`}
+                        style={activeTab === (item.item_key.split('.').pop() || item.item_key) && tenant ? { backgroundColor: `${tenant.primary_color}1a`, color: tenant.primary_color } : activeTab === (item.item_key.split('.').pop() || item.item_key) ? { backgroundColor: 'var(--primary-10)', color: 'var(--primary)' } : {}}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 flex justify-center">
-                            {isActive && <CheckCircle2 size={16} className={tenant ? "" : "text-primary"} style={tenant ? { color: tenant.primary_color } : {}} />}
-                          </div>
-                          <span>{mod.name}</span>
-                        </div>
+                        <DynamicIcon name={item.item_icon} size={18} />
+                        {item.item_label}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                );
+              })}
+              
+              {dynamicMenu.length === 0 && (
+                <div className="px-3 py-4 text-center text-sm text-slate-500 border border-dashed border-slate-200 rounded-xl">
+                  No menu items found.
                 </div>
-              </div>
-
-              <div className="mt-6 mb-2">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-3 mb-2">App Store</p>
-                <div className="space-y-1">
-                  {moduleMaster.filter(mod => !merchantSubscriptions.some(s => s.module_id === mod.id && s.status === 'Active')).map((mod) => {
-                    return (
-                      <button
-                        key={mod.id}
-                        onClick={() => {
-                          setIsMenuOpen(false);
-                          setSelectedModuleToActivate(mod);
-                          setShowActivationModal(true);
-                        }}
-                        className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors text-slate-400 hover:bg-slate-50 hover:text-slate-900`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 flex justify-center">
-                            <Lock size={14} className="text-slate-300" />
-                          </div>
-                          <span>{mod.name}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              )}
             </nav>
 
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  clearRole();
+                  navigate('/login');
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <Store size={18} />
+                Switch Business
+              </button>
               <button 
                 onClick={() => {
                   setIsMenuOpen(false);
@@ -606,14 +560,24 @@ export default function MerchantDashboard() {
           {activeTab === 'gst' && <GSTView />}
           {activeTab === 'ledger' && <LedgerView />}
           {activeTab === 'crm' && <CRMView />}
+          {activeTab === 'finance' && <FinanceDashboard />}
+          
+          {activeTab === 'staff' && <StaffRolesView />}
           
           {/* New Module Dashboards / Placeholders */}
           {activeTab === 'dashboard' && <GenericDashboardView moduleName={activeModuleState} />}
-          {activeTab !== 'pos' && activeTab !== 'inventory' && activeTab !== 'gst' && activeTab !== 'ledger' && activeTab !== 'crm' && activeTab !== 'dashboard' && (
-             <GenericPlaceholderView tabId={activeTab} moduleName={activeModuleState} />
+          
+          {activeTab !== 'pos' && activeTab !== 'inventory' && activeTab !== 'gst' && activeTab !== 'ledger' && activeTab !== 'crm' && activeTab !== 'dashboard' && activeTab !== 'staff' && (
+             <ModulePlaceholder 
+               tabId={activeTab} 
+               menuItem={dynamicMenu.find(m => (m.item_key.split('.').pop() || m.item_key) === activeTab)} 
+             />
           )}
           {activeTab === 'inventory' && activeModuleState !== 'Retail POS' && (
-             <GenericPlaceholderView tabId={activeTab} moduleName={activeModuleState} />
+             <ModulePlaceholder 
+               tabId={activeTab} 
+               menuItem={dynamicMenu.find(m => (m.item_key.split('.').pop() || m.item_key) === activeTab)} 
+             />
           )}
         </div>
       </main>
@@ -844,15 +808,19 @@ function GenericDashboardView({ moduleName }: { moduleName: string }) {
   );
 }
 
-function GenericPlaceholderView({ tabId, moduleName }: { tabId: string, moduleName: string }) {
+function ModulePlaceholder({ tabId, menuItem }: { tabId: string, menuItem?: TenantMenuResult }) {
   return (
     <div className="p-8 h-full flex items-center justify-center text-center">
       <div>
         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Factory className="text-slate-400" size={40} />
+          {menuItem?.item_icon ? (
+            <DynamicIcon name={menuItem.item_icon} className="text-slate-400" size={40} />
+          ) : (
+            <Settings className="text-slate-400" size={40} />
+          )}
         </div>
-        <h2 className="text-2xl font-bold mb-2 text-slate-800 capitalize">{tabId.replace('-', ' ')} Module</h2>
-        <p className="text-slate-500 max-w-md mx-auto">This feature is part of the {moduleName} suite. Connect your live data to start managing these records.</p>
+        <h2 className="text-2xl font-bold mb-2 text-slate-800 capitalize">{menuItem?.item_label || tabId.replace('-', ' ')}</h2>
+        <p className="text-slate-500 max-w-md mx-auto">This section is coming soon.</p>
       </div>
     </div>
   );
@@ -2236,9 +2204,15 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
                     </Button>
                   </td>}
                   {selectedColumns['Delete ButtonColumn'] && <td className="px-1 py-1.5 text-center">
-                    <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold border-slate-300">
-                      Delete
-                    </Button>
+                    <PermissionGate permission="inventory.product.delete" fallback={
+                      <Button disabled variant="outline" size="sm" className="h-6 text-[10px] px-2 bg-slate-100 text-slate-300 font-bold border-slate-200 cursor-not-allowed" title="No permission">
+                        Delete
+                      </Button>
+                    }>
+                      <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 bg-slate-100 hover:bg-red-50 text-red-600 font-bold border-slate-300">
+                        Delete
+                      </Button>
+                    </PermissionGate>
                   </td>}
                   <td className="px-1 py-1.5 text-center">
                     <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold border-slate-300">
@@ -2494,72 +2468,172 @@ function GSTView() {
 // 4. Purchase & Ledger
 // ==========================================
 function LedgerView() {
+  const { tenant, user } = useAuth();
+  const [walletId, setWalletId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  // Test Form State
+  const [amount, setAmount] = useState('1000');
+  const [txType, setTxType] = useState('credit');
+  const [description, setDescription] = useState('Manual Entry');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Verification state
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+
+  useEffect(() => {
+    const initTestWallet = async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase || !tenant || !user) return;
+      
+      // Try to find existing test wallet
+      const { data: existing } = await supabase
+        .from('wallet_accounts')
+        .select('id')
+        .eq('tenant_id', tenant.id)
+        .eq('owner_type', 'tenant_cash')
+        .limit(1)
+        .single();
+        
+      if (existing) {
+        setWalletId(existing.id);
+      } else {
+        // Create one for testing
+        const { data: newWallet, error } = await supabase
+          .from('wallet_accounts')
+          .insert({
+            tenant_id: tenant.id,
+            owner_type: 'tenant_cash',
+            owner_id: tenant.id,
+            account_label: 'Main Cash Book (Test)'
+          })
+          .select('id')
+          .single();
+          
+        if (newWallet) {
+          setWalletId(newWallet.id);
+        } else {
+           console.error("Failed to create test wallet", error);
+        }
+      }
+    };
+    initTestWallet();
+  }, [tenant, user]);
+
+  const handleTransaction = async () => {
+    if (!walletId) return;
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    try {
+      const { data, error } = await supabase.rpc('post_ledger_transaction', {
+        p_wallet_account_id: walletId,
+        p_type: txType,
+        p_amount: parseFloat(amount),
+        p_reference_type: 'manual_adjustment',
+        p_reference_id: null,
+        p_description: description,
+        p_created_by: user?.id
+      });
+
+      if (error) throw error;
+      toast.success(`Transaction successful`);
+      setRefreshKey(k => k + 1);
+    } catch (err: any) {
+      toast.error(err.message || 'Transaction failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyBalance = async () => {
+    if (!walletId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('verify_wallet_balance', {
+        p_wallet_account_id: walletId
+      });
+      if (error) throw error;
+      setVerifyResult(data);
+      if (data.is_match) {
+        toast.success("Balance matches ledger correctly!");
+      } else {
+        toast.error("Balance mismatch detected!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Verification failed');
+    }
+  };
+
+  if (!walletId) {
+    return <div className="p-8 text-center text-slate-500">Initializing test wallet... Please ensure schema is applied in Supabase.</div>;
+  }
+
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+    <div key={refreshKey} className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">Purchase & Ledgers</h2>
-        <p className="text-slate-500">Real-time Cash Book, Supplier entries, and Banking.</p>
+        <h2 className="text-2xl font-bold text-slate-900">Cash & Bank Ledger</h2>
+        <p className="text-slate-500">Central Wallet & Ledger Engine (Stage 0)</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm border-none">
-          <CardHeader className="border-b">
-             <CardTitle className="flex items-center gap-2"><Wallet size={20}/> Cash Book (गल्ला)</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-             <div className="p-4 bg-emerald-50 border-b flex justify-between items-center">
-               <span className="font-medium text-emerald-800">Current Balance</span>
-               <span className="text-2xl font-bold text-emerald-700">₹ 12,450.00</span>
-             </div>
-             <div className="divide-y divide-slate-100">
-               <div className="p-4 flex justify-between items-center hover:bg-slate-50">
-                 <div>
-                   <p className="font-semibold text-sm">Cash Sales (Bill #102-105)</p>
-                   <p className="text-xs text-slate-500">10:45 AM</p>
-                 </div>
-                 <span className="font-bold text-emerald-600">+ ₹ 4,500</span>
-               </div>
-               <div className="p-4 flex justify-between items-center hover:bg-slate-50">
-                 <div>
-                   <p className="font-semibold text-sm">Supplier Payment (Ramesh Traders)</p>
-                   <p className="text-xs text-slate-500">09:30 AM</p>
-                 </div>
-                 <span className="font-bold text-red-600">- ₹ 2,000</span>
-               </div>
-             </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 space-y-6">
+          <WalletBalanceCard walletId={walletId} onRefresh={() => setRefreshKey(k=>k+1)} />
+          
+          <Card className="shadow-sm border-none bg-white">
+            <CardHeader className="border-b pb-4">
+              <CardTitle className="text-lg">Add Manual Entry</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <Select value={txType} onValueChange={setTxType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credit">Credit (Add Funds)</SelectItem>
+                    <SelectItem value="debit">Debit (Remove Funds)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Amount</label>
+                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="1" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Input value={description} onChange={e => setDescription(e.target.value)} />
+              </div>
+              <Button className="w-full" onClick={handleTransaction} disabled={loading}>
+                {loading ? 'Processing...' : 'Post Transaction'}
+              </Button>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-sm border-none">
-          <CardHeader className="border-b flex flex-row justify-between items-center">
-             <CardTitle className="flex items-center gap-2"><Users size={20}/> Supplier Ledgers</CardTitle>
-             <Button size="sm">New Purchase Entry</Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-               <div className="p-4 flex justify-between items-center hover:bg-slate-50">
-                 <div>
-                   <p className="font-semibold text-sm">Ramesh Traders</p>
-                   <p className="text-xs text-slate-500">Last purchase: 2 days ago</p>
-                 </div>
-                 <div className="text-right">
-                   <span className="font-bold text-red-600 block">₹ 15,000 Cr</span>
-                   <span className="text-xs text-slate-500">Payable</span>
-                 </div>
-               </div>
-               <div className="p-4 flex justify-between items-center hover:bg-slate-50">
-                 <div>
-                   <p className="font-semibold text-sm">A1 Wholesalers</p>
-                   <p className="text-xs text-slate-500">Last purchase: 1 week ago</p>
-                 </div>
-                 <div className="text-right">
-                   <span className="font-bold text-emerald-600 block">₹ 0</span>
-                   <span className="text-xs text-slate-500">Settled</span>
-                 </div>
-               </div>
-             </div>
-          </CardContent>
-        </Card>
+          <Card className="shadow-sm border-none bg-white">
+             <CardHeader className="border-b pb-4">
+                <CardTitle className="text-lg">Engine Tests</CardTitle>
+             </CardHeader>
+             <CardContent className="p-6 space-y-4">
+                <Button variant="outline" className="w-full" onClick={verifyBalance}>
+                  Run Balance Verification (RPC)
+                </Button>
+                {verifyResult && (
+                  <div className={`p-4 rounded-lg text-sm font-mono ${verifyResult.is_match ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>
+                    <p>Stored: {verifyResult.stored_balance}</p>
+                    <p>Calculated: {verifyResult.calculated_balance}</p>
+                    <p>Match: {verifyResult.is_match ? 'Yes' : 'NO'}</p>
+                  </div>
+                )}
+             </CardContent>
+          </Card>
+        </div>
+        
+        <div className="lg:col-span-2">
+          <LedgerHistoryTable walletId={walletId} />
+        </div>
       </div>
     </div>
   );

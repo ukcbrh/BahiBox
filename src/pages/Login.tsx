@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/ca
 import { Button } from '@/src/components/ui/button';
 import { Input } from '@/src/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
-import { ModuleType } from '../types';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { Store, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
   useDocumentTitle('BahiBox | Login');
@@ -17,13 +17,18 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  const { signInWithGoogle, signInWithEmail, user, loading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, user, loading, isSuperAdmin, availableRoles, currentRole, selectRole, logout } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {
-      navigate('/merchant');
+      if (isSuperAdmin) {
+        navigate('/superadmin');
+      } else if (currentRole) {
+        navigate('/merchant');
+      }
+      // If user but no currentRole and multiple available roles, we wait on this screen
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isSuperAdmin, currentRole, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +41,6 @@ export default function Login() {
         loginEmail = `${identifier}@staff.bahibox.local`;
       }
       await signInWithEmail(loginEmail, password);
-      // navigation can be handled in useEffect or here if we know userRole, but for now we navigate manually or rely on a wrapper.
-      // Wait, let's just go to /merchant, context will update
-      navigate('/merchant');
     } catch (err: any) {
       setError('Failed to sign in. Please check your credentials.');
     } finally {
@@ -51,7 +53,6 @@ export default function Login() {
       setError('');
       setIsLoggingIn(true);
       await signInWithGoogle();
-      // Google Login Redirects the browser, so we don't navigate manually
     } catch (err: any) {
       if (err?.message?.includes('OAuth secret') || err?.message?.includes('Unsupported provider')) {
         setError('Google Sign-In requires configuring Google OAuth Client ID and Secret in your Supabase Dashboard under Authentication > Providers.');
@@ -62,6 +63,53 @@ export default function Login() {
     }
   };
 
+  if (user && !loading && !isSuperAdmin && !currentRole && availableRoles.length > 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-center items-center p-4">
+        <div className="mb-8 flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+          <img src="/logolight.png" alt="BahiBox Logo" className="h-28 md:h-36 dark:hidden object-contain" />
+          <img src="/logodark.png" alt="BahiBox Logo" className="h-28 md:h-36 hidden dark:block object-contain" />
+        </div>
+        
+        <Card className="w-full max-w-md shadow-xl border-slate-200">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-2xl font-bold tracking-tight">Select Business</CardTitle>
+            <p className="text-sm text-slate-500 mt-2">
+              You have access to multiple businesses. Please choose one to continue.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3">
+              {availableRoles.map((role, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => selectRole(role)}
+                  className="flex items-center p-4 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+                >
+                  <div className="bg-slate-100 p-3 rounded-lg group-hover:bg-blue-100 mr-4 transition-colors">
+                    <Store className="w-6 h-6 text-slate-600 group-hover:text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900 group-hover:text-blue-900">{role.tenant_name || 'Unnamed Business'}</h4>
+                    <p className="text-sm text-slate-500 group-hover:text-blue-700 capitalize">
+                      Role: {role.role_name} • {role.business_type}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+              <Button variant="ghost" onClick={logout} className="text-slate-500 hover:text-slate-700">
+                Cancel & Logout
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col justify-center items-center p-4">
       <div className="mb-8 flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
@@ -69,9 +117,9 @@ export default function Login() {
         <img src="/logodark.png" alt="BahiBox Logo" className="h-28 md:h-36 hidden dark:block object-contain" />
       </div>
 
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">BahiBox Login</CardTitle>
+      <Card className="w-full max-w-md shadow-lg border-slate-200">
+        <CardHeader className="text-center pb-2">
+          <CardTitle className="text-2xl font-bold tracking-tight">BahiBox Login</CardTitle>
           <p className="text-sm text-slate-500 mt-2">
             Sign in to your account
           </p>
