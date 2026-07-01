@@ -15,12 +15,22 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 export default function Landing() {
   useDocumentTitle('BahiBox');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   const [selectedModule, setSelectedModule] = useState('retail');
   const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', inquiryType: '' });
   const [modulesList, setModulesList] = useState<ModuleMaster[]>([]);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [activeSubscriptions, setActiveSubscriptions] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (isSuperAdmin) {
+        navigate('/superadmin');
+      } else {
+        navigate('/merchant');
+      }
+    }
+  }, [user, loading, isSuperAdmin, navigate]);
 
   useEffect(() => {
     const fetchSubscriptions = async () => {

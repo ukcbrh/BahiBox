@@ -47,7 +47,8 @@ import {
   Calendar,
   Sprout,
   AlertTriangle,
-  Lock
+  Lock,
+  Store
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/src/components/ui/card';
 import { Button } from '@/src/components/ui/button';
@@ -65,6 +66,7 @@ import { TenantMenuResult } from '../db/database.types';
 import { StaffRolesView } from '../components/StaffRolesView';
 import { PermissionGate } from '../components/PermissionGate';
 import { WalletBalanceCard, LedgerHistoryTable } from '../components/WalletComponents';
+import { FinanceDashboard } from '../components/FinanceComponents';
 
 // Helper to render dynamic icon
 const DynamicIcon = ({ name, className, size = 20 }: { name: string, className?: string, size?: number }) => {
