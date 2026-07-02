@@ -67,6 +67,14 @@ import { StaffRolesView } from '../components/StaffRolesView';
 import { PermissionGate } from '../components/PermissionGate';
 import { WalletBalanceCard, LedgerHistoryTable } from '../components/WalletComponents';
 import { FinanceDashboard } from '../components/FinanceComponents';
+import { SettingsView } from '../components/SettingsView';
+import { ReportsHub } from '../components/reports/ReportsHub';
+import { RetailBillingPOS } from '../components/retail/RetailBillingPOS';
+import { RetailProductsInventory } from '../components/retail/RetailProductsInventory';
+import { RetailPurchases } from '../components/retail/RetailPurchases';
+import { RetailCustomers } from '../components/retail/RetailCustomers';
+import { RetailSuppliers } from '../components/retail/RetailSuppliers';
+import { RetailDiscountsOffers } from '../components/retail/RetailDiscountsOffers';
 
 // Helper to render dynamic icon
 const DynamicIcon = ({ name, className, size = 20 }: { name: string, className?: string, size?: number }) => {
@@ -406,6 +414,20 @@ export default function MerchantDashboard() {
             <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
               <button 
                 onClick={() => {
+                  setActiveTab('settings');
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold transition-colors ${
+                  activeTab === 'settings'
+                    ? 'text-primary bg-primary/10' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Settings size={18} />
+                Settings
+              </button>
+              <button 
+                onClick={() => {
                   setIsMenuOpen(false);
                   clearRole();
                   navigate('/login');
@@ -544,7 +566,8 @@ export default function MerchantDashboard() {
         )}
 
         <div className="flex-1 overflow-auto bg-slate-50">
-          {activeTab === 'pos' && (
+          {activeTab === 'pos' && activeModuleState === 'Retail POS' && <RetailBillingPOS />}
+          {activeTab === 'pos' && activeModuleState !== 'Retail POS' && (
             <HybridPOSView 
               products={products} 
               setProducts={setProducts} 
@@ -552,30 +575,31 @@ export default function MerchantDashboard() {
               setOrders={setOrders} 
             />
           )}
-          {activeTab === 'inventory' && activeModuleState === 'Retail POS' && (
-            <InventoryView 
-              products={products} 
-              setProducts={setProducts} 
-              onRefresh={async () => {}}
-            />
-          )}
-          {activeTab === 'gst' && <GSTView />}
-          {activeTab === 'ledger' && <LedgerView />}
-          {activeTab === 'crm' && <CRMView />}
-          {activeTab === 'finance' && <FinanceDashboard />}
-          
-          {activeTab === 'staff' && <StaffRolesView />}
-          
-          {/* New Module Dashboards / Placeholders */}
-          {activeTab === 'dashboard' && <GenericDashboardView moduleName={activeModuleState} />}
-          
-          {activeTab !== 'pos' && activeTab !== 'inventory' && activeTab !== 'gst' && activeTab !== 'ledger' && activeTab !== 'crm' && activeTab !== 'dashboard' && activeTab !== 'staff' && (
+          {activeTab === 'inventory' && activeModuleState === 'Retail POS' && <RetailProductsInventory />}
+          {activeTab === 'inventory' && activeModuleState !== 'Retail POS' && (
              <ModulePlaceholder 
                tabId={activeTab} 
                menuItem={dynamicMenu.find(m => (m.item_key.split('.').pop() || m.item_key) === activeTab)} 
              />
           )}
-          {activeTab === 'inventory' && activeModuleState !== 'Retail POS' && (
+          
+          {activeTab === 'purchases' && activeModuleState === 'Retail POS' && <RetailPurchases />}
+          {activeTab === 'customers' && activeModuleState === 'Retail POS' && <RetailCustomers />}
+          {activeTab === 'suppliers' && activeModuleState === 'Retail POS' && <RetailSuppliers />}
+          {activeTab === 'discounts' && activeModuleState === 'Retail POS' && <RetailDiscountsOffers />}
+
+          {(activeTab === 'gst' || activeTab === 'reports') && <ReportsHub />}
+          {activeTab === 'ledger' && <LedgerView />}
+          {activeTab === 'crm' && <CRMView />}
+          {activeTab === 'finance' && <FinanceDashboard />}
+          
+          {activeTab === 'staff' && <StaffRolesView />}
+          {activeTab === 'settings' && <SettingsView />}
+          
+          {/* New Module Dashboards / Placeholders */}
+          {activeTab === 'dashboard' && <GenericDashboardView moduleName={activeModuleState} />}
+          
+          {activeTab !== 'pos' && activeTab !== 'inventory' && activeTab !== 'gst' && activeTab !== 'reports' && activeTab !== 'ledger' && activeTab !== 'crm' && activeTab !== 'finance' && activeTab !== 'dashboard' && activeTab !== 'staff' && activeTab !== 'settings' && activeTab !== 'purchases' && activeTab !== 'customers' && activeTab !== 'suppliers' && activeTab !== 'discounts' && (
              <ModulePlaceholder 
                tabId={activeTab} 
                menuItem={dynamicMenu.find(m => (m.item_key.split('.').pop() || m.item_key) === activeTab)} 
@@ -2410,58 +2434,6 @@ function InventoryView({ products, setProducts, onRefresh }: InventoryViewProps)
           </table>
         </div>
       </Card>
-    </div>
-  );
-}
-
-// ==========================================
-// 3. GST & Tax Compliance
-// ==========================================
-function GSTView() {
-  return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">GST & Tax Compliance</h2>
-          <p className="text-slate-500">Live tax calculator and automated GSTR exports.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="border-primary text-primary"><FileText size={16} className="mr-2"/> Export GSTR-1</Button>
-          <Button variant="outline" className="border-primary text-primary"><FileText size={16} className="mr-2"/> Export GSTR-3B</Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white shadow-sm border-none">
-           <CardContent className="p-6">
-             <p className="text-sm font-medium text-slate-500 mb-1">Total Output Tax (Sales)</p>
-             <h3 className="text-3xl font-bold text-slate-900">₹ 45,200</h3>
-             <div className="mt-4 space-y-2 text-sm text-slate-600">
-               <div className="flex justify-between"><span>CGST:</span> <span className="font-medium">₹ 22,600</span></div>
-               <div className="flex justify-between"><span>SGST:</span> <span className="font-medium">₹ 22,600</span></div>
-               <div className="flex justify-between"><span>IGST:</span> <span className="font-medium">₹ 0</span></div>
-             </div>
-           </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-none">
-           <CardContent className="p-6">
-             <p className="text-sm font-medium text-slate-500 mb-1">Total Input Tax (Purchases)</p>
-             <h3 className="text-3xl font-bold text-slate-900">₹ 32,100</h3>
-             <div className="mt-4 space-y-2 text-sm text-slate-600">
-               <div className="flex justify-between"><span>CGST:</span> <span className="font-medium">₹ 16,050</span></div>
-               <div className="flex justify-between"><span>SGST:</span> <span className="font-medium">₹ 16,050</span></div>
-               <div className="flex justify-between"><span>IGST:</span> <span className="font-medium">₹ 0</span></div>
-             </div>
-           </CardContent>
-        </Card>
-        <Card className="bg-primary text-white shadow-sm border-none">
-           <CardContent className="p-6">
-             <p className="text-primary-foreground/80 text-sm font-medium mb-1">Net GST Payable</p>
-             <h3 className="text-3xl font-bold">₹ 13,100</h3>
-             <p className="text-sm mt-4 text-primary-foreground/90">Estimated payable for current month. Automatically calculated based on B2B/B2C logic.</p>
-           </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

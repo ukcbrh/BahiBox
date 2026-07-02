@@ -34,6 +34,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { fallbackModules } from '../data';
 import { getSupabaseClient } from '../lib/supabase';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { NotificationEngineView } from '../components/NotificationEngineView';
+import { SubscriptionPlanManager } from '../components/payments/SubscriptionPlanManager';
+import { PlatformPaymentsDashboard } from '../components/payments/PlatformPaymentsDashboard';
 
 // Mock Data
 const revenueData = [
@@ -368,10 +371,12 @@ export default function SuperAdmin() {
         <div className="flex-1 py-6 px-3 space-y-1.5">
           <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard View" />
           <NavItem id="pricing" icon={CreditCard} label="Pricing & Plans" />
+          <NavItem id="plans" icon={CreditCard} label="Subscription Plans" />
+          <NavItem id="payments" icon={IndianRupee} label="Platform Payments" />
           <NavItem id="merchants" icon={Building2} label="Merchants Directory" />
           <NavItem id="settings" icon={Settings} label="Global Settings" />
           <NavItem id="support" icon={Ticket} label="Support & Tickets" />
-          <NavItem id="broadcast" icon={Megaphone} label="Broadcasts" />
+          <NavItem id="notifications" icon={Bell} label="Notification Engine" />
           <NavItem id="rbac" icon={UserCog} label="Sub-Admins (RBAC)" />
         </div>
         
@@ -865,60 +870,9 @@ export default function SuperAdmin() {
             </div>
           )}
 
-          {/* BROADCAST TAB */}
-          {activeTab === 'broadcast' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div>
-                <h1 className="text-2xl font-bold dark:text-white">Global Broadcast</h1>
-                <p className="text-slate-500 dark:text-slate-400">Send push notifications and alerts instantly.</p>
-              </div>
-
-              <Card className="max-w-3xl dark:bg-slate-900 dark:border-slate-800 border-primary/20 shadow-md">
-                <CardHeader className="bg-primary/5 dark:bg-primary/10 border-b dark:border-slate-800">
-                  <CardTitle className="flex items-center gap-2 text-primary">
-                    <Megaphone size={20} /> New Broadcast Message
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold dark:text-white">Target Audience</label>
-                    <Select defaultValue="all_merchants">
-                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all_merchants">All Merchants (B2B)</SelectItem>
-                        <SelectItem value="all_public">All Public App Users (B2C)</SelectItem>
-                        <SelectItem value="retail_only">Retail POS Merchants Only</SelectItem>
-                        <SelectItem value="healthcare_only">Healthcare Merchants Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold dark:text-white">Notification Title</label>
-                    <Input placeholder="E.g., System Maintenance Alert" className="dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold dark:text-white">Message Body</label>
-                    <Textarea 
-                      placeholder="Type your message here..." 
-                      className="h-32 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                      value={broadcastMsg}
-                      onChange={(e) => setBroadcastMsg(e.target.value)}
-                    />
-                  </div>
-
-                  <Button className="w-full h-12 text-lg shadow-lg hover:shadow-xl transition-all" onClick={() => {
-                    alert("Broadcast Sent Successfully!");
-                    setBroadcastMsg('');
-                  }}>
-                    Send Push Notification Now
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+          {/* NOTIFICATION ENGINE TAB */}
+          {activeTab === 'notifications' && (
+            <NotificationEngineView />
           )}
 
           {/* SUPPORT TICKETS TAB */}
@@ -969,6 +923,20 @@ export default function SuperAdmin() {
                   </table>
                 </div>
               </Card>
+            </div>
+          )}
+
+          {/* PLANS TAB */}
+          {activeTab === 'plans' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <SubscriptionPlanManager />
+            </div>
+          )}
+
+          {/* PAYMENTS TAB */}
+          {activeTab === 'payments' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <PlatformPaymentsDashboard />
             </div>
           )}
 

@@ -13,6 +13,7 @@ import PublicApp from './pages/PublicApp';
 import Pricing from './pages/Pricing';
 import Checkout from './pages/Checkout';
 import SuperAdmin from './pages/SuperAdmin';
+import ScanAndGo from './pages/ScanAndGo';
 import { AuthProvider } from './contexts/AuthContext';
 import { TenantProvider } from './contexts/TenantContext';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/merchant" element={<MerchantDashboard />} />
             <Route path="/public" element={<PublicApp />} />
             <Route path="/superadmin" element={<SuperAdmin />} />
+            <Route path="/scan" element={<ScanAndGo />} />
           </Routes>
           <PWAInstallPrompt />
         </BrowserRouter>
