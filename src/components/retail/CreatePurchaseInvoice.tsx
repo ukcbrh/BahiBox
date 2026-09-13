@@ -403,6 +403,8 @@ export function CreatePurchaseInvoice({ onBack, editData }: CreatePurchaseInvoic
         p_tenant_id: currentTenantId,
         p_branch_id: branchId,
         p_supplier_id: supplierId,
+        p_invoice_number: invoiceNo,
+        p_invoice_date: invoiceDate,
         p_po_number: invoiceNo,
         p_items: rpcItems,
         p_created_by: user?.id,

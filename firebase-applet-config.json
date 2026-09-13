@@ -6,5 +6,6 @@
   "firestoreDatabaseId": "ai-studio-e553a390-799a-45f4-b970-a9bddc954034",
   "storageBucket": "bahibox4.firebasestorage.app",
   "messagingSenderId": "298217912273",
-  "measurementId": ""
+  "measurementId": "",
+  "recaptchaSiteKey": ""
 }
