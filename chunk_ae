@@ -1,0 +1,119 @@
+             {visibleColumns.sales_alt_unit && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.sales_alt_unit || ''} onChange={e => updateItem(item.key, { sales_alt_unit: e.target.value })} /></td>}
+                  {visibleColumns.conv && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.conv || ''} onChange={e => updateItem(item.key, { conv: e.target.value })} /></td>}
+                  {visibleColumns.min_stock && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.min_stock || 0} onChange={e => updateItem(item.key, { min_stock: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.status && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.status || ''} onChange={e => updateItem(item.key, { status: e.target.value })} /></td>}
+                  {visibleColumns.s_tax && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.s_tax || 0} onChange={e => updateItem(item.key, { s_tax: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.p_tax && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.p_tax || 0} onChange={e => updateItem(item.key, { p_tax: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.g_down && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.g_down || ''} onChange={e => updateItem(item.key, { g_down: e.target.value })} /></td>}
+                  {visibleColumns.rack && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.rack || ''} onChange={e => updateItem(item.key, { rack: e.target.value })} /></td>}
+                  {visibleColumns.def_qty && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.def_qty || 0} onChange={e => updateItem(item.key, { def_qty: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.part_no && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.part_no || ''} onChange={e => updateItem(item.key, { part_no: e.target.value })} /></td>}
+                  {visibleColumns.cmb_gst && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.cmb_gst || ''} onChange={e => updateItem(item.key, { cmb_gst: e.target.value })} /></td>}
+                  <td className="px-4 py-3 text-center">₹{item.selling_price}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateItem(item.key, { quantity: Math.max(1, item.quantity - 1) })}><Minus className="h-3 w-3" /></Button>
+                      <Input type="number" className="h-7 w-14 text-center px-1" value={item.quantity} onChange={e => updateItem(item.key, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateItem(item.key, { quantity: item.quantity + 1 })}><Plus className="h-3 w-3" /></Button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 justify-center">
+                      <select className="h-7 text-xs border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-950" value={item.discount_type} onChange={e => updateItem(item.key, { discount_type: e.target.value as any, discount_value: 0 })}>
+                        <option value="none">None</option>
+                        <option value="percent">%</option>
+                        <option value="fixed">₹</option>
+                      </select>
+                      {item.discount_type !== 'none' && (
+                        <Input type="number" className="h-7 w-16 text-center px-1" value={item.discount_value} onChange={e => updateItem(item.key, { discount_value: Number(e.target.value) || 0 })} />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-400">{item.est_gst_rate}%</td>
+                  <td className="px-4 py-3 text-center font-semibold text-slate-800 dark:text-slate-200">₹{line.total.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => removeItem(item.key)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      <div className="p-3 border-b border-slate-200 dark:border-slate-800 relative">
+          <div className="flex gap-2 items-start">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                className="pl-10 h-9"
+                placeholder="Search product to add..."
+                value={productSearch}
+                onChange={e => { setProductSearch(e.target.value); setShowProductDropdown(true); }}
+                onFocus={() => setShowProductDropdown(true)}
+              />
+            </div>
+            
+          </div>
+          {showProductDropdown && (
+            <div className="absolute z-10 left-3 right-3 mt-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {filteredProducts.length === 0 ? (
+                <p className="p-3 text-sm text-slate-400">No products found.</p>
+              ) : filteredProducts.map(p => (
+                <div
+                  key={p.id}
+                  className="p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 flex justify-between"
+                  onClick={() => addProductRow(p)}
+                >
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{p.product_name}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">₹{p.selling_price}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Payment Type</h3>
+          <div className="flex flex-wrap gap-2">
+            {(['credit', 'cash', 'cheque', 'online'] as const).map(pm => (
+              <button
+                key={pm}
+                onClick={() => setPaymentMethod(pm)}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg border-2 uppercase transition-colors ${paymentMethod === pm ? 'border-[#00b884] bg-[#00b884]/10 text-[#00b884]' : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'}`}
+              >
+                {pm}
+              </button>
+            ))}
+          </div>
+          {paymentMethod === 'credit' && (
+            <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+              Credit sale requires the customer to have an assigned credit limit with sufficient available balance.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 text-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+          <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Taxable Value</span><span className="font-semibold">₹{totals.taxable.toFixed(2)}</span></div>
+          <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Total GST</span><span className="font-semibold">₹{totals.gst.toFixed(2)}</span></div>
+          <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-lg font-bold text-slate-900 dark:text-white">
+            <span>Grand Total</span><span>₹{totals.grand.toFixed(2)}</span>
+          </div>
+          <p className="text-[10px] text-slate-400 italic">Final GST/totals are authoritatively recalculated on save.</p>
+        </div>
+      </div>
+
+      <div className="flex justify-end pb-8">
+        <Button
+          className="h-11 px-8 bg-[#00b884] hover:bg-[#00a375] text-white font-bold"
+          disabled={saving || items.length === 0 || !selectedCustomer}
+          onClick={handleSave}
+        >
+          {saving ? 'Saving...' : 'Save & Print'}
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,6 @@
+{
+  "name": "BahiBox",
+  "description": "B2B ERP and B2C Public Super-App ecosystem.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

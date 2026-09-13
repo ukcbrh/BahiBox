@@ -1,0 +1,112 @@
+
+
+export const DebitNotePage = () => {
+  const { currentTenantId, user } = useAuth();
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
+  const [reason, setReason] = useState('');
+  const [taxableValue, setTaxableValue] = useState('');
+  const [gstRate, setGstRate] = useState('18');
+  const [saving, setSaving] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) { setLoading(false); return; }
+
+    const { data: invData } = await supabase.from('purchase_invoices').select('id, invoice_number, total_amount').eq('tenant_id', currentTenantId).order('created_at', { ascending: false }).limit(100);
+    setInvoices(invData || []);
+
+    const { data: noteData } = await supabase.from('purchase_credit_debit_notes').select('*, purchase_invoices(invoice_number)').eq('tenant_id', currentTenantId).order('created_at', { ascending: false }).limit(50);
+    setNotes(noteData || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [currentTenantId]);
+
+  const handleSubmit = async () => {
+    if (!selectedInvoiceId || !taxableValue || !currentTenantId || !user) return;
+    setSaving(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setSaving(false); return; }
+
+    const { error } = await supabase.rpc('create_debit_note', {
+      p_tenant_id: currentTenantId,
+      p_original_invoice_id: selectedInvoiceId,
+      p_reason: reason || null,
+      p_taxable_value: parseFloat(taxableValue),
+      p_gst_rate_percent: parseFloat(gstRate) || 0,
+      p_created_by: user.id
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Debit note created');
+    setSelectedInvoiceId(''); setReason(''); setTaxableValue('');
+    fetchData();
+  };
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Debit Note</h2>
+        <p className="text-slate-500 dark:text-slate-400">Record a purchase return against a supplier invoice, reducing your payable.</p>
+      </div>
+
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <label className="text-sm font-medium">Original Purchase Invoice *</label>
+            <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm">
+              <option value="">Select invoice</option>
+              {invoices.map((inv: any) => <option key={inv.id} value={inv.id}>{inv.invoice_number} — ₹{inv.total_amount}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">Taxable Value *</label>
+              <Input type="number" value={taxableValue} onChange={(e) => setTaxableValue(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">GST Rate %</label>
+              <Input type="number" value={gstRate} onChange={(e) => setGstRate(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Reason</label>
+            <Input placeholder="e.g. Goods returned to supplier, Billing correction" value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
+          <Button className="w-full h-12" onClick={handleSubmit} disabled={saving || !selectedInvoiceId || !taxableValue}>
+            {saving ? 'Creating...' : 'Create Debit Note'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-4">Recent Debit Notes</h3>
+          {loading ? (
+            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+          ) : notes.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No debit notes yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((n: any) => (
+                <div key={n.id} className="border border-slate-100 dark:border-slate-800 rounded-xl p-4 flex justify-between">
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-slate-100">{n.note_number}</p>
+                    <p className="text-xs text-slate-500">Against: {n.purchase_invoices?.invoice_number} · {n.note_date}</p>
+                    {n.reason && <p className="text-xs text-slate-400 mt-1">{n.reason}</p>}
+                  </div>
+                  <p className="font-extrabold text-emerald-600">₹{n.total_amount?.toLocaleString('en-IN')}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

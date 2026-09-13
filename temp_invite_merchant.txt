@@ -1,0 +1,273 @@
+  app.post('/api/invite-merchant', async (req, res) => {
+    try {
+      const { email, full_name, business_name, phone, address, module_name } = req.body;
+      if (!email || !full_name) {
+        return res.status(400).json({ error: 'Email aur naam zaroori hain' });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+      const serviceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+      if (!serviceKey) {
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+      const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const alreadyExists = existingUsers?.users?.some((u: any) => u.email?.toLowerCase() === String(email).toLowerCase());
+      if (alreadyExists) {
+        return res.status(409).json({ error: 'Is email se pehle se ek account hai. Kripya Login page se login karein.' });
+      }
+
+      const siteUrl = process.env.SITE_URL || 'https://www.bahibox.com';
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${siteUrl}/set-password`,
+        data: { full_name, role: 'merchant' }
+      });
+
+      if (inviteError) {
+        return res.status(500).json({ error: inviteError.message });
+      }
+
+      const newUserId = inviteData.user.id;
+
+      await supabaseAdmin.from('users').update({
+        full_name, phone: phone || null, email
+      }).eq('id', newUserId);
+
+      const moduleTypeMap: Record<string, string> = {
+        'Retail POS': 'retail',
+        'Manufacturing ERP': 'manufacturing',
+        'Hotel/Restaurant': 'hospitality',
+        'Health Care': 'healthcare',
+        'Education': 'education',
+        'Transport Management': 'logistics',
+        'Agri Management': 'agri',
+        'Daily Services': 'services'
+      };
+      const businessType = moduleTypeMap[module_name] || 'retail';
+
+      const { data: newTenantId, error: bootstrapError } = await supabaseAdmin.rpc('bootstrap_merchant_tenant', {
+        p_user_id: newUserId,
+        p_business_name: business_name || `${full_name}'s Business`,
+        p_business_type: businessType
+      });
+
+      if (bootstrapError) {
+        console.error('Bootstrap error:', bootstrapError.message);
+      } else if (newTenantId && address) {
+        const { data: branches } = await supabaseAdmin.from('branches').select('id').eq('tenant_id', newTenantId).eq('is_main_branch', true);
+        if (branches && branches.length > 0) {
+          await supabaseAdmin.from('branches').update({ address }).eq('id', branches[0].id);
+        }
+      }
+
+      res.json({ success: true, tenant_id: newTenantId, user_id: newUserId });
+    } catch (err: any) {
+      console.error('Error inviting merchant:', err.message);
+      res.status(500).json({ error: err.message || 'Internal server error' });
+    }
+  });
+
+  app.post('/api/admin-set-temp-password', async (req, res) => {
+    try {
+      const { target_user_id } = req.body;
+      if (!target_user_id) {
+        return res.status(400).json({ error: 'target_user_id required' });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+      const serviceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+      if (!serviceKey) {
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const supabaseAnon = createClient(supabaseUrl, process.env.VITE_SUPABASE_ANON_KEY!, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user: callerUser }, error: authError } = await supabaseAnon.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authError || !callerUser) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // SECURITY: sirf genuine platform-admin hi yeh call kar sake
+      const { data: adminCheck } = await supabaseAnon.rpc('is_platform_admin', { p_user_id: callerUser.id });
+      if (!adminCheck) {
+        return res.status(403).json({ error: 'Only platform admins can generate temporary passwords' });
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+
+      // Random 8-character temp-password banao
+      const tempPassword = Math.random().toString(36).slice(-4).toUpperCase() + Math.random().toString(36).slice(-4);
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(target_user_id, {
+        password: tempPassword
+      });
+
+      if (updateError) {
+        return res.status(500).json({ error: updateError.message });
+      }
+
+      // Audit-log
+      await supabaseAdmin.from('audit_logs').insert({
+        actor_user_id: callerUser.id,
+        action_type: 'admin_set_temp_password',
+        target_table: 'auth.users',
+        target_id: target_user_id
+      });
+
+      res.json({ success: true, temp_password: tempPassword });
+    } catch (err: any) {
+      console.error('Error setting temp password:', err.message);
+      res.status(500).json({ error: err.message || 'Internal server error' });
+    }
+  });
+
+
+  app.post('/api/activate-free-plan', async (req, res) => {
+    try {
+      const { plan_id, tenant_id, promo_code } = req.body;
+      if (!tenant_id || !plan_id) {
+        return res.status(400).json({ error: 'Missing tenant or plan details' });
+      }
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const supabaseAnon = createClient(supabaseUrl, process.env.VITE_SUPABASE_ANON_KEY!, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (authError || !user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { data: roleCheck } = await supabaseAnon
+        .from('user_tenant_roles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenant_id)
+        .limit(1);
+
+      const { data: adminCheck } = await supabaseAnon.rpc('is_platform_admin', { p_user_id: user.id }).single();
+
+      if ((!roleCheck || roleCheck.length === 0) && !adminCheck) {
+        return res.status(403).json({ error: 'You are not authorized to activate a plan for this business account' });
+      }
+
+      const { data: plan, error: planError } = await supabaseAnon
+        .from('subscription_plans')
+        .select('price_monthly, module_name, name')
+        .eq('id', plan_id)
+        .single();
+
+      if (planError || !plan) {
+        return res.status(404).json({ error: 'Plan not found' });
+      }
+
+      let price = Number(plan.price_monthly) || 0;
+
+      if (price > 0 && promo_code) {
+        const { data: coupon } = await supabaseAnon
+          .from('promo_codes')
+          .select('*')
+          .eq('code', String(promo_code).toUpperCase())
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (coupon) {
+          const moduleMatch = coupon.applicable_module === 'All' || coupon.applicable_module === plan.module_name;
+          const planMatch = coupon.applicable_plan === 'All' || coupon.applicable_plan === plan.name;
+          if (moduleMatch && planMatch) {
+            const discountType = coupon.discount_type || (coupon.discount_percentage ? 'percentage' : 'fixed');
+            const discountValue = coupon.discount_value ?? coupon.discount_percentage ?? coupon.fixed_discount ?? 0;
+            const discountAmount = discountType === 'percentage' ? (price * Number(discountValue)) / 100 : Number(discountValue);
+            price = Math.max(0, price - discountAmount);
+          }
+        }
+      }
+
+      if (price > 0) {
+        return res.status(400).json({ error: 'This plan requires payment. Please complete checkout via Razorpay.' });
+      }
+
+      const supabaseAdmin = createClient(supabaseUrl, process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!);
+
+      const v_start_date = new Date();
+      const v_end_date = new Date();
+      v_end_date.setFullYear(v_end_date.getFullYear() + 10);
+
+      const { data: samePlansInModule } = await supabaseAdmin
+        .from('subscription_plans')
+        .select('id')
+        .eq('module_name', plan.module_name);
+      const sameModulePlanIds = (samePlansInModule || []).map((p: any) => p.id);
+
+      const { data: existing } = await supabaseAdmin.from('merchant_subscriptions')
+        .select('id')
+        .eq('tenant_id', tenant_id)
+        .in('plan_id', sameModulePlanIds)
+        .in('status', ['active', 'trialing', 'past_due'])
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        await supabaseAdmin.from('merchant_subscriptions').update({
+          plan_id,
+          billing_cycle: 'monthly',
+          status: 'active',
+          current_period_start: v_start_date.toISOString(),
+          current_period_end: v_end_date.toISOString(),
+          next_renewal_date: v_end_date.toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', existing[0].id);
+      } else {
+        await supabaseAdmin.from('merchant_subscriptions').insert({
+          tenant_id,
+          plan_id,
+          billing_cycle: 'monthly',
+          status: 'active',
+          current_period_start: v_start_date.toISOString(),
+          current_period_end: v_end_date.toISOString(),
+          next_renewal_date: v_end_date.toISOString()
+        });
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('Error activating free plan:', err.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true, hmr: process.env.DISABLE_HMR === 'true' ? false : { server } },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();

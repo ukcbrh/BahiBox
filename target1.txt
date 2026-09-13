@@ -1,0 +1,85 @@
+app.post('/api/create-invoice-payment-qr', async (req, res) => {
+    try {
+      const { tenant_id, invoice_id, amount, due_days } = req.body;
+      if (!tenant_id || !invoice_id || !amount) {
+        return res.status(400).json({ error: 'tenant_id, invoice_id and amount are required' });
+      }
+
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: 'Unauthorized' });
+
+      const supabaseUrl = process.env.VITE_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (!keyId || !keySecret) {
+        return res.status(500).json({ error: 'Razorpay credentials not configured' });
+      }
+      const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+
+            // NOTE: 'close_by' is intentionally NOT sent here — Razorpay's API 
+      // rejects it for usage='multiple_use' QR codes (it's only valid for 
+      // 'single_use'). multiple_use QR codes simply never expire on their 
+      // own; our webhook explicitly calls the "close QR" API once payment 
+      // is confirmed, so no close_by is needed.
+      const rzpResponse = await fetch('https://api.razorpay.com/v1/payments/qr_codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        body: JSON.stringify({
+          type: 'upi_qr',
+          name: 'Invoice Payment',
+          usage: 'multiple_use',
+          fixed_amount: true,
+          payment_amount: Math.round(amount * 100),
+          notes: { tenant_id, invoice_id }
+        })
+      });
+
+      if (!rzpResponse.ok) {
+        const errText = await rzpResponse.text();
+        console.error('Razorpay invoice-QR create error:', errText);
+        return res.status(502).json({ error: 'Failed to create payment QR with Razorpay' });
+      }
+
+            const rzpData: any = await rzpResponse.json();
+
+      // Razorpay's image_url forces a download (Content-Disposition: 
+      // attachment) rather than displaying inline, so an <img src="..."> 
+      // tag can't render it directly. Download the actual image bytes 
+      // ourselves and re-host them in our own storage bucket instead.
+      let finalImageUrl = rzpData.image_url;
+      try {
+        const imgResponse = await fetch(rzpData.image_url);
+        if (imgResponse.ok) {
+          const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+          const fileName = `invoice-qr/${invoice_id}-${Date.now()}.png`;
+          const { error: uploadErr } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: true });
+
+          if (!uploadErr) {
+            const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            if (publicUrlData?.publicUrl) {
+              finalImageUrl = publicUrlData.publicUrl;
+            }
+          } else {
+            console.error('Failed to re-host QR image, falling back to Razorpay URL:', uploadErr.message);
+          }
+        }
+      } catch (rehostErr: any) {
+        console.error('Error re-hosting QR image, falling back to Razorpay URL:', rehostErr.message);
+      }
+
+      await supabase.from('sales_invoices').update({
+        payment_qr_id: rzpData.id,
+        payment_qr_image_url: finalImageUrl
+      }).eq('id', invoice_id);
+
+      res.json({ qr_id: rzpData.id, image_url: finalImageUrl });
+    } catch (err: any) {
+      console.error('create-invoice-payment-qr error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  })

@@ -1,0 +1,4 @@
+331:    const { data, error } = await supabase.rpc('create_food_order', {
+1211:  const handlePlaceOrder = async () => {
+1221:    const { error } = await supabase.rpc('create_food_order', {
+1368:          <Button className="w-full h-12 gap-2" disabled={placing} onClick={handlePlaceOrder}>

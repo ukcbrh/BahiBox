@@ -1,0 +1,18 @@
+=== QuotationPage ===
+export const QuotationPage = ({ onBack }: { onBack?: () => void } = {}) => {
+  const { currentTenantId, user, activeBranchId } = useAuth();
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [quotations, setQuotations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+=== SaleOrderPage ===
+export const SaleOrderPage = ({ onBack }: { onBack?: () => void } = {}) => {
+  const { currentTenantId, user, activeBranchId } = useAuth();
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [saleOrders, setSaleOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+

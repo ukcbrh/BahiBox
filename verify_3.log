@@ -1,0 +1,814 @@
+=== 1 ===
+src/components/retail/CreditNoteList.tsx:1:import { useState, useEffect } from 'react';
+src/components/retail/CreditNoteList.tsx:2:import { useAuth } from '@/src/contexts/AuthContext';
+src/components/retail/CreditNoteList.tsx:3:import { getSupabaseClient } from '@/src/lib/supabase';
+src/components/retail/CreditNoteList.tsx:4:import { Button } from '@/src/components/ui/button';
+src/components/retail/CreditNoteList.tsx:5:import { Card, CardContent } from '@/src/components/ui/card';
+src/components/retail/CreditNoteList.tsx:6:import { ArrowLeft, Plus } from 'lucide-react';
+src/components/retail/CreditNoteList.tsx:7:import { CreateCreditNote } from './CreateCreditNote';
+src/components/retail/CreditNoteList.tsx:8:
+src/components/retail/CreditNoteList.tsx:9:export function CreditNoteList({ onBack }: { onBack?: () => void }) {
+src/components/retail/CreditNoteList.tsx:10:  const { currentTenantId } = useAuth();
+src/components/retail/CreditNoteList.tsx:11:  const [isCreating, setIsCreating] = useState(false);
+src/components/retail/CreditNoteList.tsx:12:  const [notes, setNotes] = useState<any[]>([]);
+src/components/retail/CreditNoteList.tsx:13:  const [loading, setLoading] = useState(true);
+src/components/retail/CreditNoteList.tsx:14:
+src/components/retail/CreditNoteList.tsx:15:  const fetchNotes = async () => {
+src/components/retail/CreditNoteList.tsx:16:    setLoading(true);
+src/components/retail/CreditNoteList.tsx:17:    const supabase = getSupabaseClient();
+src/components/retail/CreditNoteList.tsx:18:    if (!supabase || !currentTenantId) { setLoading(false); return; }
+src/components/retail/CreditNoteList.tsx:19:    const { data } = await supabase.from('credit_notes').select('*, retail_customers(customer_name)').eq('tenant_id', currentTenantId).order('created_at', { ascending: false }).limit(100);
+src/components/retail/CreditNoteList.tsx:20:    setNotes(data || []);
+src/components/retail/CreditNoteList.tsx:21:    setLoading(false);
+src/components/retail/CreditNoteList.tsx:22:  };
+src/components/retail/CreditNoteList.tsx:23:
+src/components/retail/CreditNoteList.tsx:24:  useEffect(() => { if (!isCreating) fetchNotes(); }, [currentTenantId, isCreating]);
+src/components/retail/CreditNoteList.tsx:25:
+src/components/retail/CreditNoteList.tsx:26:  if (isCreating) {
+src/components/retail/CreditNoteList.tsx:27:    return <CreateCreditNote onBack={() => setIsCreating(false)} />;
+src/components/retail/CreditNoteList.tsx:28:  }
+src/components/retail/CreditNoteList.tsx:29:
+src/components/retail/CreditNoteList.tsx:30:  return (
+src/components/retail/CreditNoteList.tsx:31:    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+src/components/retail/CreditNoteList.tsx:32:      {onBack && (
+src/components/retail/CreditNoteList.tsx:33:        <Button variant="ghost" onClick={onBack} className="gap-2 -ml-2"><ArrowLeft className="h-4 w-4" /> Back to Documents</Button>
+src/components/retail/CreditNoteList.tsx:34:      )}
+src/components/retail/CreditNoteList.tsx:35:      <div className="flex justify-between items-center">
+src/components/retail/CreditNoteList.tsx:36:        <div>
+src/components/retail/CreditNoteList.tsx:37:          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Credit Notes</h2>
+src/components/retail/CreditNoteList.tsx:38:          <p className="text-slate-500 dark:text-slate-400">Sales returns and corrections.</p>
+src/components/retail/CreditNoteList.tsx:39:        </div>
+src/components/retail/CreditNoteList.tsx:40:        <Button onClick={() => setIsCreating(true)}><Plus className="h-4 w-4 mr-2" /> Add New</Button>
+src/components/retail/CreditNoteList.tsx:41:      </div>
+src/components/retail/CreditNoteList.tsx:42:      <Card>
+src/components/retail/CreditNoteList.tsx:43:        <CardContent className="p-6">
+src/components/retail/CreditNoteList.tsx:44:          {loading ? (
+src/components/retail/CreditNoteList.tsx:45:            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+src/components/retail/CreditNoteList.tsx:46:          ) : notes.length === 0 ? (
+src/components/retail/CreditNoteList.tsx:47:            <p className="text-sm text-slate-400 text-center py-6">No credit notes yet.</p>
+src/components/retail/CreditNoteList.tsx:48:          ) : (
+src/components/retail/CreditNoteList.tsx:49:            <div className="space-y-3">
+src/components/retail/CreditNoteList.tsx:50:              {notes.map((n: any) => (
+src/components/retail/CreditNoteList.tsx:51:                <div key={n.id} className="border border-slate-100 dark:border-slate-800 rounded-xl p-4 flex justify-between">
+src/components/retail/CreditNoteList.tsx:52:                  <div>
+src/components/retail/CreditNoteList.tsx:53:                    <p className="font-bold text-slate-900 dark:text-slate-100">{n.note_number}</p>
+src/components/retail/CreditNoteList.tsx:54:                    <p className="text-xs text-slate-500">{n.retail_customers?.customer_name} · {n.note_date} · {n.source_type === 'sales_invoice' ? 'Against Invoice' : 'Against Delivery Challan'}</p>
+src/components/retail/CreditNoteList.tsx:55:                    {n.reason && <p className="text-xs text-slate-400 mt-1">{n.reason}</p>}
+src/components/retail/CreditNoteList.tsx:56:                  </div>
+src/components/retail/CreditNoteList.tsx:57:                  <p className="font-extrabold text-red-600">₹{Number(n.total_amount).toLocaleString('en-IN')}</p>
+src/components/retail/CreditNoteList.tsx:58:                </div>
+src/components/retail/CreditNoteList.tsx:59:              ))}
+src/components/retail/CreditNoteList.tsx:60:            </div>
+src/components/retail/CreditNoteList.tsx:61:          )}
+src/components/retail/CreditNoteList.tsx:62:        </CardContent>
+src/components/retail/CreditNoteList.tsx:63:      </Card>
+src/components/retail/CreditNoteList.tsx:64:    </div>
+src/components/retail/CreditNoteList.tsx:65:  );
+src/components/retail/CreditNoteList.tsx:66:}
+src/components/retail/DebitNoteList.tsx:1:import { useState, useEffect } from 'react';
+src/components/retail/DebitNoteList.tsx:2:import { useAuth } from '@/src/contexts/AuthContext';
+src/components/retail/DebitNoteList.tsx:3:import { getSupabaseClient } from '@/src/lib/supabase';
+src/components/retail/DebitNoteList.tsx:4:import { Button } from '@/src/components/ui/button';
+src/components/retail/DebitNoteList.tsx:5:import { Card, CardContent } from '@/src/components/ui/card';
+src/components/retail/DebitNoteList.tsx:6:import { ArrowLeft, Plus } from 'lucide-react';
+src/components/retail/DebitNoteList.tsx:7:import { CreateDebitNote } from './CreateDebitNote';
+src/components/retail/DebitNoteList.tsx:8:
+src/components/retail/DebitNoteList.tsx:9:export function DebitNoteList({ onBack }: { onBack?: () => void }) {
+src/components/retail/DebitNoteList.tsx:10:  const { currentTenantId } = useAuth();
+src/components/retail/DebitNoteList.tsx:11:  const [isCreating, setIsCreating] = useState(false);
+src/components/retail/DebitNoteList.tsx:12:  const [notes, setNotes] = useState<any[]>([]);
+src/components/retail/DebitNoteList.tsx:13:  const [loading, setLoading] = useState(true);
+src/components/retail/DebitNoteList.tsx:14:
+src/components/retail/DebitNoteList.tsx:15:  const fetchNotes = async () => {
+src/components/retail/DebitNoteList.tsx:16:    setLoading(true);
+src/components/retail/DebitNoteList.tsx:17:    const supabase = getSupabaseClient();
+src/components/retail/DebitNoteList.tsx:18:    if (!supabase || !currentTenantId) { setLoading(false); return; }
+src/components/retail/DebitNoteList.tsx:19:    const { data } = await supabase.from('debit_notes').select('*, suppliers(supplier_name)').eq('tenant_id', currentTenantId).order('created_at', { ascending: false }).limit(100);
+src/components/retail/DebitNoteList.tsx:20:    setNotes(data || []);
+src/components/retail/DebitNoteList.tsx:21:    setLoading(false);
+src/components/retail/DebitNoteList.tsx:22:  };
+src/components/retail/DebitNoteList.tsx:23:
+src/components/retail/DebitNoteList.tsx:24:  useEffect(() => { if (!isCreating) fetchNotes(); }, [currentTenantId, isCreating]);
+src/components/retail/DebitNoteList.tsx:25:
+src/components/retail/DebitNoteList.tsx:26:  if (isCreating) {
+src/components/retail/DebitNoteList.tsx:27:    return <CreateDebitNote onBack={() => setIsCreating(false)} />;
+src/components/retail/DebitNoteList.tsx:28:  }
+src/components/retail/DebitNoteList.tsx:29:
+src/components/retail/DebitNoteList.tsx:30:  return (
+src/components/retail/DebitNoteList.tsx:31:    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+src/components/retail/DebitNoteList.tsx:32:      {onBack && (
+src/components/retail/DebitNoteList.tsx:33:        <Button variant="ghost" onClick={onBack} className="gap-2 -ml-2"><ArrowLeft className="h-4 w-4" /> Back to Documents</Button>
+src/components/retail/DebitNoteList.tsx:34:      )}
+src/components/retail/DebitNoteList.tsx:35:      <div className="flex justify-between items-center">
+src/components/retail/DebitNoteList.tsx:36:        <div>
+src/components/retail/DebitNoteList.tsx:37:          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Debit Notes</h2>
+src/components/retail/DebitNoteList.tsx:38:          <p className="text-slate-500 dark:text-slate-400">Purchase returns and corrections.</p>
+src/components/retail/DebitNoteList.tsx:39:        </div>
+src/components/retail/DebitNoteList.tsx:40:        <Button onClick={() => setIsCreating(true)}><Plus className="h-4 w-4 mr-2" /> Add New</Button>
+src/components/retail/DebitNoteList.tsx:41:      </div>
+src/components/retail/DebitNoteList.tsx:42:      <Card>
+src/components/retail/DebitNoteList.tsx:43:        <CardContent className="p-6">
+src/components/retail/DebitNoteList.tsx:44:          {loading ? (
+src/components/retail/DebitNoteList.tsx:45:            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+src/components/retail/DebitNoteList.tsx:46:          ) : notes.length === 0 ? (
+src/components/retail/DebitNoteList.tsx:47:            <p className="text-sm text-slate-400 text-center py-6">No debit notes yet.</p>
+src/components/retail/DebitNoteList.tsx:48:          ) : (
+src/components/retail/DebitNoteList.tsx:49:            <div className="space-y-3">
+src/components/retail/DebitNoteList.tsx:50:              {notes.map((n: any) => (
+src/components/retail/DebitNoteList.tsx:51:                <div key={n.id} className="border border-slate-100 dark:border-slate-800 rounded-xl p-4 flex justify-between">
+src/components/retail/DebitNoteList.tsx:52:                  <div>
+src/components/retail/DebitNoteList.tsx:53:                    <p className="font-bold text-slate-900 dark:text-slate-100">{n.note_number}</p>
+src/components/retail/DebitNoteList.tsx:54:                    <p className="text-xs text-slate-500">{n.suppliers?.supplier_name} · {n.note_date} · {n.source_type === 'purchase_invoice' ? 'Against Invoice' : 'Against Delivery Challan'}</p>
+src/components/retail/DebitNoteList.tsx:55:                    {n.reason && <p className="text-xs text-slate-400 mt-1">{n.reason}</p>}
+src/components/retail/DebitNoteList.tsx:56:                  </div>
+src/components/retail/DebitNoteList.tsx:57:                  <p className="font-extrabold text-emerald-600">₹{Number(n.total_amount).toLocaleString('en-IN')}</p>
+src/components/retail/DebitNoteList.tsx:58:                </div>
+src/components/retail/DebitNoteList.tsx:59:              ))}
+src/components/retail/DebitNoteList.tsx:60:            </div>
+src/components/retail/DebitNoteList.tsx:61:          )}
+src/components/retail/DebitNoteList.tsx:62:        </CardContent>
+src/components/retail/DebitNoteList.tsx:63:      </Card>
+src/components/retail/DebitNoteList.tsx:64:    </div>
+src/components/retail/DebitNoteList.tsx:65:  );
+src/components/retail/DebitNoteList.tsx:66:}
+src/components/documents/DocumentsHub.tsx:1:import React, { useState } from 'react';
+src/components/documents/DocumentsHub.tsx:2:import { Card, CardContent } from '@/src/components/ui/card';
+src/components/documents/DocumentsHub.tsx:3:import { FileText, FileCheck, PackageCheck, PackageMinus, ClipboardList, ClipboardCheck, FileMinus, FilePlus } from 'lucide-react';
+src/components/documents/DocumentsHub.tsx:4:import { QuotationPage, ProformaInvoicePage, SaleOrderPage } from '../retail/RetailPOSFullScreen';
+src/components/documents/DocumentsHub.tsx:5:import { DeliveryChallanOutwardList } from '../retail/DeliveryChallanOutwardList';
+src/components/documents/DocumentsHub.tsx:6:import { DeliveryChallanInwardList } from '../retail/DeliveryChallanInwardList';
+src/components/documents/DocumentsHub.tsx:7:import { RetailPurchases } from '../retail/RetailPurchases';
+src/components/documents/DocumentsHub.tsx:8:import { CreditNoteList } from '../retail/CreditNoteList';
+src/components/documents/DocumentsHub.tsx:9:import { DebitNoteList } from '../retail/DebitNoteList';
+src/components/documents/DocumentsHub.tsx:10:
+src/components/documents/DocumentsHub.tsx:11:export function DocumentsHub() {
+src/components/documents/DocumentsHub.tsx:12:  const [activeDoc, setActiveDoc] = useState<string | null>(null);
+src/components/documents/DocumentsHub.tsx:13:  
+src/components/documents/DocumentsHub.tsx:14:  const docs = [
+src/components/documents/DocumentsHub.tsx:15:    { id: 'quotation', title: 'Quotation', desc: 'Send price estimates to customers before invoicing.', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
+src/components/documents/DocumentsHub.tsx:16:    { id: 'proforma', title: 'Proforma Invoice', desc: 'Draft invoice sent before final billing.', icon: FileCheck, color: 'text-cyan-600', bg: 'bg-cyan-100' },
+src/components/documents/DocumentsHub.tsx:17:    { id: 'sale_order', title: 'Sale Order', desc: 'Confirmed customer orders before final invoicing.', icon: ClipboardList, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+src/components/documents/DocumentsHub.tsx:18:    { id: 'purchase_order', title: 'Purchase Order', desc: 'Order goods from suppliers and receive stock later.', icon: ClipboardCheck, color: 'text-purple-600', bg: 'bg-purple-100' },
+src/components/documents/DocumentsHub.tsx:19:    { id: 'delivery_challan_inward', title: 'Delivery Challan (In)', desc: 'Record goods received without an invoice.', icon: PackageCheck, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+src/components/documents/DocumentsHub.tsx:20:    { id: 'delivery_challan_outward', title: 'Delivery Challan (Out)', desc: 'Record goods sent out without an invoice.', icon: PackageMinus, color: 'text-amber-600', bg: 'bg-amber-100' },
+src/components/documents/DocumentsHub.tsx:21:    { id: 'credit_note', title: 'Credit Note', desc: 'Record a sales return, reducing customer’s due.', icon: FileMinus, color: 'text-red-600', bg: 'bg-red-100' },
+src/components/documents/DocumentsHub.tsx:22:    { id: 'debit_note', title: 'Debit Note', desc: 'Record a purchase return, reducing your payable.', icon: FilePlus, color: 'text-orange-600', bg: 'bg-orange-100' },
+src/components/documents/DocumentsHub.tsx:23:  ];
+src/components/documents/DocumentsHub.tsx:24:  
+src/components/documents/DocumentsHub.tsx:25:  if (activeDoc === 'quotation') return <QuotationPage onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:26:  if (activeDoc === 'proforma') return <ProformaInvoicePage onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:27:  if (activeDoc === 'sale_order') return <SaleOrderPage onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:28:  if (activeDoc === 'purchase_order') return <RetailPurchases onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:29:  if (activeDoc === 'delivery_challan_inward') return <DeliveryChallanInwardList onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:30:  if (activeDoc === 'delivery_challan_outward') return <DeliveryChallanOutwardList onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:31:  if (activeDoc === 'credit_note') return <CreditNoteList onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:32:  if (activeDoc === 'debit_note') return <DebitNoteList onBack={() => setActiveDoc(null)} />;
+src/components/documents/DocumentsHub.tsx:33:  
+src/components/documents/DocumentsHub.tsx:34:  return (
+src/components/documents/DocumentsHub.tsx:35:    <div className="space-y-6">
+src/components/documents/DocumentsHub.tsx:36:      <div>
+src/components/documents/DocumentsHub.tsx:37:        <h1 className="text-2xl font-bold dark:text-white">Documents</h1>
+src/components/documents/DocumentsHub.tsx:38:        <p className="text-slate-500 dark:text-slate-400">Create and manage quotations, orders, challans, and notes.</p>
+src/components/documents/DocumentsHub.tsx:39:      </div>
+src/components/documents/DocumentsHub.tsx:40:      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+src/components/documents/DocumentsHub.tsx:41:        {docs.map((d) => {
+src/components/documents/DocumentsHub.tsx:42:          const Icon = d.icon;
+src/components/documents/DocumentsHub.tsx:43:          return (
+src/components/documents/DocumentsHub.tsx:44:            <Card
+src/components/documents/DocumentsHub.tsx:45:              key={d.id}
+src/components/documents/DocumentsHub.tsx:46:              className="border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+src/components/documents/DocumentsHub.tsx:47:              onClick={() => setActiveDoc(d.id)}
+src/components/documents/DocumentsHub.tsx:48:            >
+src/components/documents/DocumentsHub.tsx:49:              <CardContent className="p-6">
+src/components/documents/DocumentsHub.tsx:50:                <div className={`p-3 rounded-xl w-fit mb-4 transition-colors group-hover:bg-primary/10 ${d.bg} ${d.color}`}>
+src/components/documents/DocumentsHub.tsx:51:                  <Icon size={24} className={d.color} />
+src/components/documents/DocumentsHub.tsx:52:                </div>
+src/components/documents/DocumentsHub.tsx:53:                <h3 className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">{d.title}</h3>
+src/components/documents/DocumentsHub.tsx:54:                <p className="text-sm text-slate-500 dark:text-slate-400">{d.desc}</p>
+src/components/documents/DocumentsHub.tsx:55:              </CardContent>
+src/components/documents/DocumentsHub.tsx:56:            </Card>
+src/components/documents/DocumentsHub.tsx:57:          );
+src/components/documents/DocumentsHub.tsx:58:        })}
+src/components/documents/DocumentsHub.tsx:59:      </div>
+src/components/documents/DocumentsHub.tsx:60:    </div>
+src/components/documents/DocumentsHub.tsx:61:  );
+src/components/documents/DocumentsHub.tsx:62:}
+src/components/SettingsGeneral.tsx:1:import React, { useState, useEffect } from 'react';
+src/components/SettingsGeneral.tsx:2:import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+src/components/SettingsGeneral.tsx:3:import { Input } from './ui/input';
+src/components/SettingsGeneral.tsx:4:import { Button } from './ui/button';
+src/components/SettingsGeneral.tsx:5:import { Plus, Check, Eye, X } from 'lucide-react';
+src/components/SettingsGeneral.tsx:6:import { toast } from 'sonner';
+src/components/SettingsGeneral.tsx:7:import { getSupabaseClient } from '@/src/lib/supabase';
+src/components/SettingsGeneral.tsx:8:import { useAuth } from '@/src/contexts/AuthContext';
+src/components/SettingsGeneral.tsx:9:import BillPreview from './retail/BillPreview';
+src/components/SettingsGeneral.tsx:10:import { BillData } from '@/src/lib/billRenderer';
+src/components/SettingsGeneral.tsx:11:import { tenantScopedKey } from '@/src/lib/tenantStorage';
+src/components/SettingsGeneral.tsx:12:
+src/components/SettingsGeneral.tsx:13:const CHANNEL_LABELS: Record<string, string> = {
+src/components/SettingsGeneral.tsx:14:  instore: 'In-Store POS',
+src/components/SettingsGeneral.tsx:15:  scan_go: 'Scan & Go',
+src/components/SettingsGeneral.tsx:16:  online: 'Online Orders',
+src/components/SettingsGeneral.tsx:17:  sale_invoice: 'Sale Invoice',
+src/components/SettingsGeneral.tsx:18:  purchase_invoice: 'Purchase Invoice',
+src/components/SettingsGeneral.tsx:19:  delivery_challan_in: 'Delivery Challan (Inward)',
+src/components/SettingsGeneral.tsx:20:  delivery_challan_out: 'Delivery Challan (Outward)',
+src/components/SettingsGeneral.tsx:21:  inward_payment: 'Inward Payment Receipt',
+src/components/SettingsGeneral.tsx:22:  outward_payment: 'Outward Payment Receipt',
+src/components/SettingsGeneral.tsx:23:  credit_note: 'Credit Note',
+src/components/SettingsGeneral.tsx:24:  debit_note: 'Debit Note'
+src/components/SettingsGeneral.tsx:25:};
+src/components/SettingsGeneral.tsx:26:
+src/components/SettingsGeneral.tsx:27:export function SettingsGeneral() {
+src/components/SettingsGeneral.tsx:28:  const { currentTenantId } = useAuth();
+src/components/SettingsGeneral.tsx:29:
+src/components/SettingsGeneral.tsx:30:  const [settings, setSettings] = useState<Record<string, { prefix: string; printerSize: string }>>({
+src/components/SettingsGeneral.tsx:31:    instore: { prefix: 'INV-', printerSize: '80mm' },
+src/components/SettingsGeneral.tsx:32:    scan_go: { prefix: 'SG-', printerSize: '80mm' },
+src/components/SettingsGeneral.tsx:33:    online: { prefix: 'ORD-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:34:    sale_invoice: { prefix: 'INV-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:35:    purchase_invoice: { prefix: 'PUR-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:36:    delivery_challan_in: { prefix: 'DCI-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:37:    delivery_challan_out: { prefix: 'DCO-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:38:    inward_payment: { prefix: 'RCPT-IN-', printerSize: '80mm' },
+src/components/SettingsGeneral.tsx:39:    outward_payment: { prefix: 'RCPT-OUT-', printerSize: '80mm' },
+src/components/SettingsGeneral.tsx:40:    credit_note: { prefix: 'CN-', printerSize: 'A4' },
+src/components/SettingsGeneral.tsx:41:    debit_note: { prefix: 'DN-', printerSize: 'A4' }
+src/components/SettingsGeneral.tsx:42:  });
+src/components/SettingsGeneral.tsx:43:
+src/components/SettingsGeneral.tsx:44:  const [labelSettings, setLabelSettings] = useState(() => {
+src/components/SettingsGeneral.tsx:45:    try {
+src/components/SettingsGeneral.tsx:46:      const saved = localStorage.getItem(tenantScopedKey('barcodeLabelSettings', currentTenantId));
+src/components/SettingsGeneral.tsx:47:      if (saved) {
+src/components/SettingsGeneral.tsx:48:        const parsed = JSON.parse(saved);
+src/components/SettingsGeneral.tsx:49:        return { width: 40, height: 25, unit: 'mm', ...parsed, codeType: parsed.codeType || 'barcode' };
+src/components/SettingsGeneral.tsx:50:      }
+src/components/SettingsGeneral.tsx:51:    } catch (e) {}
+src/components/SettingsGeneral.tsx:52:    return { width: 40, height: 25, unit: 'mm' as 'mm' | 'cm' | 'in', codeType: 'barcode' as 'barcode' | 'qr' | 'both' };
+src/components/SettingsGeneral.tsx:53:  });
+src/components/SettingsGeneral.tsx:54:
+src/components/SettingsGeneral.tsx:55:  const [templates, setTemplates] = useState<any[]>([]);
+src/components/SettingsGeneral.tsx:56:  const [labelTemplates, setLabelTemplates] = useState<any[]>([]);
+src/components/SettingsGeneral.tsx:57:  const [selectedLabelTemplateId, setSelectedLabelTemplateId] = useState<string | null>(null);
+src/components/SettingsGeneral.tsx:58:  const [viewingTemplate, setViewingTemplate] = useState<{ template: any; printerSize: string; channel: string } | null>(null);
+src/components/SettingsGeneral.tsx:59:  const [selections, setSelections] = useState<Record<string, string>>({});
+src/components/SettingsGeneral.tsx:60:  const [businessInfo, setBusinessInfo] = useState<any>({ businessName: 'Your Business', address: '', phone: '' });
+src/components/SettingsGeneral.tsx:61:
+src/components/SettingsGeneral.tsx:62:  const [sizePresets, setSizePresets] = useState<any[]>([]);
+src/components/SettingsGeneral.tsx:63:  const [newPresetName, setNewPresetName] = useState('');
+src/components/SettingsGeneral.tsx:64:  const [newPresetWidth, setNewPresetWidth] = useState('40');
+src/components/SettingsGeneral.tsx:65:  const [newPresetHeight, setNewPresetHeight] = useState('25');
+src/components/SettingsGeneral.tsx:66:  const [newPresetUnit, setNewPresetUnit] = useState<'mm' | 'cm' | 'in'>('mm');
+src/components/SettingsGeneral.tsx:67:  const [showAddPreset, setShowAddPreset] = useState(false);
+src/components/SettingsGeneral.tsx:68:
+src/components/SettingsGeneral.tsx:69:  const [brandingSettings, setBrandingSettings] = useState<any>({ stamp_url: null, show_branch_name: true, show_branch_address: true });
+src/components/SettingsGeneral.tsx:70:  const stampInputRef = React.useRef<HTMLInputElement>(null);
+src/components/SettingsGeneral.tsx:71:
+src/components/SettingsGeneral.tsx:72:  const handleSaveLabelSettings = () => {
+src/components/SettingsGeneral.tsx:73:    localStorage.setItem(tenantScopedKey('barcodeLabelSettings', currentTenantId), JSON.stringify(labelSettings));
+src/components/SettingsGeneral.tsx:74:    toast.success('Label size saved successfully');
+src/components/SettingsGeneral.tsx:75:  };
+src/components/SettingsGeneral.tsx:76:
+src/components/SettingsGeneral.tsx:77:  useEffect(() => {
+src/components/SettingsGeneral.tsx:78:    const saved = localStorage.getItem(tenantScopedKey('posSettings', currentTenantId));
+src/components/SettingsGeneral.tsx:79:    if (saved) {
+src/components/SettingsGeneral.tsx:80:      try {
+src/components/SettingsGeneral.tsx:81:        setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
+src/components/SettingsGeneral.tsx:82:      } catch (e) {}
+src/components/SettingsGeneral.tsx:83:    }
+src/components/SettingsGeneral.tsx:84:  }, []);
+src/components/SettingsGeneral.tsx:85:
+src/components/SettingsGeneral.tsx:86:  useEffect(() => {
+src/components/SettingsGeneral.tsx:87:    const load = async () => {
+src/components/SettingsGeneral.tsx:88:      if (!currentTenantId) return;
+src/components/SettingsGeneral.tsx:89:      const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:90:      if (!supabase) return;
+src/components/SettingsGeneral.tsx:91:
+src/components/SettingsGeneral.tsx:92:      const { data: templatesData } = await supabase.from('bill_templates').select('*').eq('is_default', true);
+src/components/SettingsGeneral.tsx:93:      setTemplates(templatesData || []);
+src/components/SettingsGeneral.tsx:94:
+src/components/SettingsGeneral.tsx:95:      const { data: labelTemplatesData } = await supabase.from('bill_templates').select('*').eq('category', 'label').eq('is_default', true);
+src/components/SettingsGeneral.tsx:96:      setLabelTemplates(labelTemplatesData || []);
+src/components/SettingsGeneral.tsx:97:      console.log('DEBUG labelTemplatesData:', labelTemplatesData);
+src/components/SettingsGeneral.tsx:98:      const { data: presetsData } = await supabase.from('label_size_presets').select('*').eq('tenant_id', currentTenantId).order('created_at');
+src/components/SettingsGeneral.tsx:99:      setSizePresets(presetsData || []);
+src/components/SettingsGeneral.tsx:100:
+src/components/SettingsGeneral.tsx:101:      const { data: labelSelectionData } = await supabase.from('bill_format_selection').select('template_id').eq('tenant_id', currentTenantId).eq('channel', 'barcode_label').maybeSingle();
+src/components/SettingsGeneral.tsx:102:      setSelectedLabelTemplateId(labelSelectionData?.template_id || null);
+src/components/SettingsGeneral.tsx:103:
+src/components/SettingsGeneral.tsx:104:      const { data: selectionsData } = await supabase.from('bill_format_selection').select('channel, template_id').eq('tenant_id', currentTenantId);
+src/components/SettingsGeneral.tsx:105:      const selMap: Record<string, string> = {};
+src/components/SettingsGeneral.tsx:106:      (selectionsData || []).forEach((s: any) => { selMap[s.channel] = s.template_id; });
+src/components/SettingsGeneral.tsx:107:      setSelections(selMap);
+src/components/SettingsGeneral.tsx:108:
+src/components/SettingsGeneral.tsx:109:      const { data: tenantData } = await supabase.from('tenants').select('business_name').eq('id', currentTenantId).maybeSingle();
+src/components/SettingsGeneral.tsx:110:      const { data: branchData } = await supabase.from('branches').select('address, city, state').eq('tenant_id', currentTenantId).order('is_main_branch', { ascending: false }).limit(1).maybeSingle();
+src/components/SettingsGeneral.tsx:111:      setBusinessInfo({
+src/components/SettingsGeneral.tsx:112:        businessName: tenantData?.business_name || 'Your Business',
+src/components/SettingsGeneral.tsx:113:        address: [branchData?.address, branchData?.city, branchData?.state].filter(Boolean).join(', '),
+src/components/SettingsGeneral.tsx:114:        phone: ''
+src/components/SettingsGeneral.tsx:115:      });
+src/components/SettingsGeneral.tsx:116:
+src/components/SettingsGeneral.tsx:117:      const { data: brandingData } = await supabase.from('print_branding_settings').select('*').eq('tenant_id', currentTenantId).maybeSingle();
+src/components/SettingsGeneral.tsx:118:      if (brandingData) setBrandingSettings(brandingData);
+src/components/SettingsGeneral.tsx:119:    };
+src/components/SettingsGeneral.tsx:120:    load();
+src/components/SettingsGeneral.tsx:121:  }, [currentTenantId]);
+src/components/SettingsGeneral.tsx:122:
+src/components/SettingsGeneral.tsx:123:  const handleSave = () => {
+src/components/SettingsGeneral.tsx:124:    localStorage.setItem(tenantScopedKey('posSettings', currentTenantId), JSON.stringify(settings));
+src/components/SettingsGeneral.tsx:125:    toast.success('Settings saved successfully');
+src/components/SettingsGeneral.tsx:126:  };
+src/components/SettingsGeneral.tsx:127:
+src/components/SettingsGeneral.tsx:128:  const updateSetting = (channel: string, key: string, value: string) => {
+src/components/SettingsGeneral.tsx:129:    setSettings(prev => ({
+src/components/SettingsGeneral.tsx:130:      ...prev,
+src/components/SettingsGeneral.tsx:131:      [channel]: {
+src/components/SettingsGeneral.tsx:132:        ...prev[channel],
+src/components/SettingsGeneral.tsx:133:        [key]: value
+src/components/SettingsGeneral.tsx:134:      }
+src/components/SettingsGeneral.tsx:135:    }));
+src/components/SettingsGeneral.tsx:136:  };
+src/components/SettingsGeneral.tsx:137:
+src/components/SettingsGeneral.tsx:138:  const handleStampUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+src/components/SettingsGeneral.tsx:139:    const file = e.target.files?.[0];
+src/components/SettingsGeneral.tsx:140:    if (!file || !currentTenantId) return;
+src/components/SettingsGeneral.tsx:141:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:142:    if (!supabase) return;
+src/components/SettingsGeneral.tsx:143:
+src/components/SettingsGeneral.tsx:144:    toast.info('Uploading stamp...');
+src/components/SettingsGeneral.tsx:145:    try {
+src/components/SettingsGeneral.tsx:146:      const ext = file.name.split('.').pop() || 'png';
+src/components/SettingsGeneral.tsx:147:      const path = `${currentTenantId}/stamp_${Date.now()}.${ext}`;
+src/components/SettingsGeneral.tsx:148:      const { error: uploadErr } = await supabase.storage.from('product-images').upload(path, file);
+src/components/SettingsGeneral.tsx:149:      if (uploadErr) {
+src/components/SettingsGeneral.tsx:150:        toast.error('Upload failed: ' + uploadErr.message);
+src/components/SettingsGeneral.tsx:151:        return;
+src/components/SettingsGeneral.tsx:152:      }
+src/components/SettingsGeneral.tsx:153:      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+src/components/SettingsGeneral.tsx:154:      const newSettings = { ...brandingSettings, tenant_id: currentTenantId, stamp_url: urlData.publicUrl };
+src/components/SettingsGeneral.tsx:155:      const { error: saveErr } = await supabase.from('print_branding_settings').upsert(newSettings, { onConflict: 'tenant_id' });
+src/components/SettingsGeneral.tsx:156:      if (saveErr) {
+src/components/SettingsGeneral.tsx:157:        toast.error('Failed to save: ' + saveErr.message);
+src/components/SettingsGeneral.tsx:158:        return;
+src/components/SettingsGeneral.tsx:159:      }
+src/components/SettingsGeneral.tsx:160:      setBrandingSettings(newSettings);
+src/components/SettingsGeneral.tsx:161:      toast.success('Stamp uploaded and saved.');
+src/components/SettingsGeneral.tsx:162:    } catch (err: any) {
+src/components/SettingsGeneral.tsx:163:      toast.error(err.message || 'Upload failed');
+src/components/SettingsGeneral.tsx:164:    } finally {
+src/components/SettingsGeneral.tsx:165:      if (stampInputRef.current) stampInputRef.current.value = '';
+src/components/SettingsGeneral.tsx:166:    }
+src/components/SettingsGeneral.tsx:167:  };
+src/components/SettingsGeneral.tsx:168:
+src/components/SettingsGeneral.tsx:169:  const handleToggleBranding = async (key: 'show_branch_name' | 'show_branch_address' | 'bill_number_code_type' | 'show_upi_qr_on_credit', value: boolean | string) => {
+src/components/SettingsGeneral.tsx:170:    if (!currentTenantId) return;
+src/components/SettingsGeneral.tsx:171:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:172:    if (!supabase) return;
+src/components/SettingsGeneral.tsx:173:    const newSettings = { ...brandingSettings, tenant_id: currentTenantId, [key]: value };
+src/components/SettingsGeneral.tsx:174:    setBrandingSettings(newSettings);
+src/components/SettingsGeneral.tsx:175:    const { error } = await supabase.from('print_branding_settings').upsert(newSettings, { onConflict: 'tenant_id' });
+src/components/SettingsGeneral.tsx:176:    if (error) toast.error('Failed to save: ' + error.message);
+src/components/SettingsGeneral.tsx:177:  };
+src/components/SettingsGeneral.tsx:178:
+src/components/SettingsGeneral.tsx:179:  const handleSelectTemplate = async (channel: string, printerSize: string, templateId: string) => {
+src/components/SettingsGeneral.tsx:180:    setSelections(prev => ({ ...prev, [channel]: templateId }));
+src/components/SettingsGeneral.tsx:181:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:182:    if (!supabase || !currentTenantId) return;
+src/components/SettingsGeneral.tsx:183:    const { error } = await supabase.from('bill_format_selection').upsert({
+src/components/SettingsGeneral.tsx:184:      tenant_id: currentTenantId,
+src/components/SettingsGeneral.tsx:185:      channel,
+src/components/SettingsGeneral.tsx:186:      printer_size: printerSize,
+src/components/SettingsGeneral.tsx:187:      template_id: templateId,
+src/components/SettingsGeneral.tsx:188:      updated_at: new Date().toISOString()
+src/components/SettingsGeneral.tsx:189:    }, { onConflict: 'tenant_id,channel' });
+src/components/SettingsGeneral.tsx:190:    if (error) {
+src/components/SettingsGeneral.tsx:191:      toast.error('Failed to save template choice: ' + error.message);
+src/components/SettingsGeneral.tsx:192:    } else {
+src/components/SettingsGeneral.tsx:193:      toast.success('Template selected');
+src/components/SettingsGeneral.tsx:194:    }
+src/components/SettingsGeneral.tsx:195:  };
+src/components/SettingsGeneral.tsx:196:
+src/components/SettingsGeneral.tsx:197:  const handleSelectLabelTemplate = async (templateId: string) => {
+src/components/SettingsGeneral.tsx:198:    setSelectedLabelTemplateId(templateId);
+src/components/SettingsGeneral.tsx:199:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:200:    if (!supabase || !currentTenantId) return;
+src/components/SettingsGeneral.tsx:201:    const { error } = await supabase.from('bill_format_selection').upsert({
+src/components/SettingsGeneral.tsx:202:      tenant_id: currentTenantId,
+src/components/SettingsGeneral.tsx:203:      channel: 'barcode_label',
+src/components/SettingsGeneral.tsx:204:      printer_size: 'label',
+src/components/SettingsGeneral.tsx:205:      template_id: templateId,
+src/components/SettingsGeneral.tsx:206:      updated_at: new Date().toISOString()
+src/components/SettingsGeneral.tsx:207:    }, { onConflict: 'tenant_id,channel' });
+src/components/SettingsGeneral.tsx:208:    if (error) toast.error('Failed to save: ' + error.message);
+src/components/SettingsGeneral.tsx:209:    else toast.success('Label template selected');
+src/components/SettingsGeneral.tsx:210:  };
+src/components/SettingsGeneral.tsx:211:
+src/components/SettingsGeneral.tsx:212:  const handleAddPreset = async () => {
+src/components/SettingsGeneral.tsx:213:    if (!newPresetName.trim() || !currentTenantId) return;
+src/components/SettingsGeneral.tsx:214:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:215:    if (!supabase) return;
+src/components/SettingsGeneral.tsx:216:    const { data, error } = await supabase.from('label_size_presets').insert({
+src/components/SettingsGeneral.tsx:217:      tenant_id: currentTenantId,
+src/components/SettingsGeneral.tsx:218:      preset_name: newPresetName.trim(),
+src/components/SettingsGeneral.tsx:219:      width: parseFloat(newPresetWidth) || 40,
+src/components/SettingsGeneral.tsx:220:      height: parseFloat(newPresetHeight) || 25,
+src/components/SettingsGeneral.tsx:221:      unit: newPresetUnit,
+src/components/SettingsGeneral.tsx:222:      is_default: sizePresets.length === 0
+src/components/SettingsGeneral.tsx:223:    }).select().single();
+src/components/SettingsGeneral.tsx:224:    if (error) {
+src/components/SettingsGeneral.tsx:225:      toast.error('Failed to save size: ' + error.message);
+src/components/SettingsGeneral.tsx:226:      return;
+src/components/SettingsGeneral.tsx:227:    }
+src/components/SettingsGeneral.tsx:228:    setSizePresets(prev => [...prev, data]);
+src/components/SettingsGeneral.tsx:229:    setNewPresetName('');
+src/components/SettingsGeneral.tsx:230:    setShowAddPreset(false);
+src/components/SettingsGeneral.tsx:231:    toast.success('Size saved');
+src/components/SettingsGeneral.tsx:232:  };
+src/components/SettingsGeneral.tsx:233:
+src/components/SettingsGeneral.tsx:234:  const handleDeletePreset = async (id: string) => {
+src/components/SettingsGeneral.tsx:235:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:236:    if (!supabase) return;
+src/components/SettingsGeneral.tsx:237:    const { error } = await supabase.from('label_size_presets').delete().eq('id', id);
+src/components/SettingsGeneral.tsx:238:    if (error) {
+src/components/SettingsGeneral.tsx:239:      toast.error('Failed to delete: ' + error.message);
+src/components/SettingsGeneral.tsx:240:      return;
+src/components/SettingsGeneral.tsx:241:    }
+src/components/SettingsGeneral.tsx:242:    setSizePresets(prev => prev.filter(p => p.id !== id));
+src/components/SettingsGeneral.tsx:243:    toast.success('Size removed');
+src/components/SettingsGeneral.tsx:244:  };
+src/components/SettingsGeneral.tsx:245:
+src/components/SettingsGeneral.tsx:246:  const handleSetDefaultPreset = async (id: string) => {
+src/components/SettingsGeneral.tsx:247:    const supabase = getSupabaseClient();
+src/components/SettingsGeneral.tsx:248:    if (!supabase || !currentTenantId) return;
+src/components/SettingsGeneral.tsx:249:    await supabase.from('label_size_presets').update({ is_default: false }).eq('tenant_id', currentTenantId);
+src/components/SettingsGeneral.tsx:250:    await supabase.from('label_size_presets').update({ is_default: true }).eq('id', id);
+src/components/SettingsGeneral.tsx:251:    setSizePresets(prev => prev.map(p => ({ ...p, is_default: p.id === id })));
+src/components/SettingsGeneral.tsx:252:    toast.success('Default size updated');
+src/components/SettingsGeneral.tsx:253:  };
+src/components/SettingsGeneral.tsx:254:
+src/components/SettingsGeneral.tsx:255:  const sampleLabelData = {
+src/components/SettingsGeneral.tsx:256:    store_name: businessInfo.businessName,
+src/components/SettingsGeneral.tsx:257:    product_name: 'Sample Product',
+src/components/SettingsGeneral.tsx:258:    size: 'M',
+src/components/SettingsGeneral.tsx:259:    mrp: 199,
+src/components/SettingsGeneral.tsx:260:    selling_price: 149,
+src/components/SettingsGeneral.tsx:261:    barcode_value: '00000001'
+src/components/SettingsGeneral.tsx:262:  };
+src/components/SettingsGeneral.tsx:263:
+src/components/SettingsGeneral.tsx:264:  const CHANNEL_META: Record<string, { label: string; infoLabel: string; personName: string }> = {
+src/components/SettingsGeneral.tsx:265:    instore: { label: 'Retail Invoice', infoLabel: 'Bill To', personName: 'Walk-in Customer' },
+src/components/SettingsGeneral.tsx:266:    scan_go: { label: 'Scan & Go Bill', infoLabel: 'Bill To', personName: 'Sample Customer' },
+src/components/SettingsGeneral.tsx:267:    online: { label: 'Online Order Invoice', infoLabel: 'Ship To', personName: 'Sample Customer' },
+src/components/SettingsGeneral.tsx:268:    sale_invoice: { label: 'Tax Invoice (Sale)', infoLabel: 'Bill To', personName: 'Sample Customer' },
+src/components/SettingsGeneral.tsx:269:    purchase_invoice: { label: 'Purchase Invoice', infoLabel: 'Supplier', personName: 'Sample Supplier' },
+src/components/SettingsGeneral.tsx:270:    delivery_challan_in: { label: 'Delivery Challan (Inward)', infoLabel: 'From', personName: 'Sample Supplier' },
+src/components/SettingsGeneral.tsx:271:    delivery_challan_out: { label: 'Delivery Challan (Outward)', infoLabel: 'To', personName: 'Sample Customer' }
+src/components/SettingsGeneral.tsx:272:  };
+src/components/SettingsGeneral.tsx:273:
+src/components/SettingsGeneral.tsx:274:  const getSampleBillData = (channel: string): BillData => {
+src/components/SettingsGeneral.tsx:275:    const meta = CHANNEL_META[channel] || CHANNEL_META['sale_invoice'];
+src/components/SettingsGeneral.tsx:276:    return {
+src/components/SettingsGeneral.tsx:277:      business: { name: businessInfo.businessName, address: businessInfo.address, phone: businessInfo.phone },
+src/components/SettingsGeneral.tsx:278:      customer: { name: meta.personName },
+src/components/SettingsGeneral.tsx:279:      customer_info_label: meta.infoLabel,
+src/components/SettingsGeneral.tsx:280:      meta: { label: meta.label, number: 'DOC-0001', date: new Date().toLocaleDateString() },
+src/components/SettingsGeneral.tsx:281:      items: [
+src/components/SettingsGeneral.tsx:282:        { name: 'Sample Product A', hsn: '1234', qty: 2, unit: 'Pcs', rate: 100, amount: 200 },
+src/components/SettingsGeneral.tsx:283:        { name: 'Sample Product B', qty: 1, unit: 'Pcs', rate: 150, amount: 150 }
+src/components/SettingsGeneral.tsx:284:      ],
+src/components/SettingsGeneral.tsx:285:      totals: {
+src/components/SettingsGeneral.tsx:286:        subtotal: 350,
+src/components/SettingsGeneral.tsx:287:        tax_breakdown: [{ label: 'GST 18%', amount: 63 }],
+src/components/SettingsGeneral.tsx:288:        grand_total: 413
+src/components/SettingsGeneral.tsx:289:      },
+src/components/SettingsGeneral.tsx:290:      footer: {}
+src/components/SettingsGeneral.tsx:291:    };
+src/components/SettingsGeneral.tsx:292:  };
+src/components/SettingsGeneral.tsx:293:
+src/components/SettingsGeneral.tsx:294:  const renderChannelSettings = (channel: string) => {
+src/components/SettingsGeneral.tsx:295:    const title = CHANNEL_LABELS[channel] || channel;
+src/components/SettingsGeneral.tsx:296:    const currentSize = settings[channel]?.printerSize || 'A4';
+src/components/SettingsGeneral.tsx:297:    const sizeTemplates = templates.filter(t => t.printer_size === currentSize);
+src/components/SettingsGeneral.tsx:298:    const selectedTemplateId = selections[channel];
+src/components/SettingsGeneral.tsx:299:
+src/components/SettingsGeneral.tsx:300:    return (
+src/components/SettingsGeneral.tsx:301:      <div className="space-y-4 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900">
+src/components/SettingsGeneral.tsx:302:        <h3 className="font-bold text-slate-800 dark:text-slate-200">{title}</h3>
+src/components/SettingsGeneral.tsx:303:        <div className="space-y-2">
+src/components/SettingsGeneral.tsx:304:          <label className="text-sm font-medium">Invoice Number Prefix</label>
+src/components/SettingsGeneral.tsx:305:          <Input 
+src/components/SettingsGeneral.tsx:306:            value={settings[channel]?.prefix || ''}
+src/components/SettingsGeneral.tsx:307:            onChange={e => updateSetting(channel, 'prefix', e.target.value)}
+src/components/SettingsGeneral.tsx:308:            placeholder="e.g. INV-" 
+src/components/SettingsGeneral.tsx:309:          />
+src/components/SettingsGeneral.tsx:310:        </div>
+src/components/SettingsGeneral.tsx:311:        <div className="space-y-2">
+src/components/SettingsGeneral.tsx:312:          <label className="text-sm font-medium">Printer Format & Size</label>
+src/components/SettingsGeneral.tsx:313:          <div className="flex flex-col gap-2">
+src/components/SettingsGeneral.tsx:314:            {['A4', 'A4-Half', '112mm', '80mm', '58mm'].map(size => (
+src/components/SettingsGeneral.tsx:315:              <label key={size} className="flex items-center gap-2 text-sm">
+src/components/SettingsGeneral.tsx:316:                <input 
+src/components/SettingsGeneral.tsx:317:                  type="radio"
+src/components/SettingsGeneral.tsx:318:                  name={`printerSize_${channel}`}
+src/components/SettingsGeneral.tsx:319:                  value={size}
+src/components/SettingsGeneral.tsx:320:                  checked={currentSize === size}
+src/components/SettingsGeneral.tsx:321:                  onChange={e => updateSetting(channel, 'printerSize', e.target.value)}
+src/components/SettingsGeneral.tsx:322:                />
+src/components/SettingsGeneral.tsx:323:                {size === 'A4' ? 'A4 Size (Standard Document)' : size === 'A4-Half' ? 'A4 Half Size / A5 (Standard Document)' : `${size === '112mm' ? '4 Inch' : size === '80mm' ? '3 Inch' : '2 Inch'} (${size}) Thermal`}
+src/components/SettingsGeneral.tsx:324:              </label>
+src/components/SettingsGeneral.tsx:325:            ))}
+src/components/SettingsGeneral.tsx:326:          </div>
+src/components/SettingsGeneral.tsx:327:        </div>
+src/components/SettingsGeneral.tsx:328:
+src/components/SettingsGeneral.tsx:329:        <div className="space-y-2 pt-2 border-t">
+src/components/SettingsGeneral.tsx:330:          <label className="text-sm font-medium">Bill Template ({currentSize})</label>
+src/components/SettingsGeneral.tsx:331:          <div className="grid grid-cols-2 gap-2">
+src/components/SettingsGeneral.tsx:332:            {sizeTemplates.map(t => (
+src/components/SettingsGeneral.tsx:333:              <div
+src/components/SettingsGeneral.tsx:334:                key={t.id}
+src/components/SettingsGeneral.tsx:335:                className={`relative border-2 rounded-lg overflow-hidden text-left ${selectedTemplateId === t.id ? 'border-blue-500' : 'border-slate-200 dark:border-slate-700'}`}
+src/components/SettingsGeneral.tsx:336:              >
+src/components/SettingsGeneral.tsx:337:                <button
+src/components/SettingsGeneral.tsx:338:                  type="button"
+src/components/SettingsGeneral.tsx:339:                  onClick={() => handleSelectTemplate(channel, currentSize, t.id)}
+src/components/SettingsGeneral.tsx:340:                  className="block w-full"
+src/components/SettingsGeneral.tsx:341:                >
+src/components/SettingsGeneral.tsx:342:                  <div style={{ height: '120px', overflow: 'hidden', background: '#e2e8f0' }}>
+src/components/SettingsGeneral.tsx:343:                    <div style={{ transform: 'scale(0.28)', transformOrigin: 'top left', width: '357%' }}>
+src/components/SettingsGeneral.tsx:344:                      <BillPreview blocks={t.blocks} data={getSampleBillData(channel)} printerSize={currentSize} />
+src/components/SettingsGeneral.tsx:345:                    </div>
+src/components/SettingsGeneral.tsx:346:                  </div>
+src/components/SettingsGeneral.tsx:347:                  <div className="px-2 py-1 text-xs font-medium bg-white dark:bg-slate-950 flex items-center justify-between">
+src/components/SettingsGeneral.tsx:348:                    {t.style_name}
+src/components/SettingsGeneral.tsx:349:                    {selectedTemplateId === t.id && <Check size={12} className="text-blue-500" />}
+src/components/SettingsGeneral.tsx:350:                  </div>
+src/components/SettingsGeneral.tsx:351:                </button>
+src/components/SettingsGeneral.tsx:352:                <button
+src/components/SettingsGeneral.tsx:353:                  type="button"
+src/components/SettingsGeneral.tsx:354:                  onClick={(e) => { e.stopPropagation(); setViewingTemplate({ template: t, printerSize: currentSize, channel }); }}
+src/components/SettingsGeneral.tsx:355:                  className="absolute top-1 right-1 bg-white dark:bg-slate-900 rounded-full p-1 shadow border border-slate-200 dark:border-slate-700"
+src/components/SettingsGeneral.tsx:356:                  title="View full size"
+src/components/SettingsGeneral.tsx:357:                >
+src/components/SettingsGeneral.tsx:358:                  <Eye size={12} />
+src/components/SettingsGeneral.tsx:359:                </button>
+src/components/SettingsGeneral.tsx:360:              </div>
+src/components/SettingsGeneral.tsx:361:            ))}
+src/components/SettingsGeneral.tsx:362:            <button
+src/components/SettingsGeneral.tsx:363:              type="button"
+src/components/SettingsGeneral.tsx:364:              onClick={() => toast.info('Custom Template Builder is coming in the next step.')}
+src/components/SettingsGeneral.tsx:365:              className="border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 text-xs text-slate-500 h-[145px]"
+src/components/SettingsGeneral.tsx:366:            >
+src/components/SettingsGeneral.tsx:367:              <Plus size={18} />
+src/components/SettingsGeneral.tsx:368:              Create Custom Template
+src/components/SettingsGeneral.tsx:369:            </button>
+src/components/SettingsGeneral.tsx:370:          </div>
+src/components/SettingsGeneral.tsx:371:        </div>
+src/components/SettingsGeneral.tsx:372:      </div>
+src/components/SettingsGeneral.tsx:373:    );
+src/components/SettingsGeneral.tsx:374:  };
+src/components/SettingsGeneral.tsx:375:
+src/components/SettingsGeneral.tsx:376:  console.log('DEBUG codeType:', labelSettings.codeType, 'filtered count:', labelTemplates.filter(t => t.printer_size === `label-${labelSettings.codeType}`).length);
+src/components/SettingsGeneral.tsx:377:
+src/components/SettingsGeneral.tsx:378:  return (
+src/components/SettingsGeneral.tsx:379:    <>
+src/components/SettingsGeneral.tsx:380:    <Card>
+src/components/SettingsGeneral.tsx:381:      <CardHeader><CardTitle>Bill Generation Settings</CardTitle></CardHeader>
+src/components/SettingsGeneral.tsx:382:      <CardContent className="space-y-6">
+src/components/SettingsGeneral.tsx:383:        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+src/components/SettingsGeneral.tsx:384:          {renderChannelSettings('instore')}
+src/components/SettingsGeneral.tsx:385:          {renderChannelSettings('scan_go')}
+src/components/SettingsGeneral.tsx:386:          {renderChannelSettings('online')}
+src/components/SettingsGeneral.tsx:387:          {renderChannelSettings('sale_invoice')}
+src/components/SettingsGeneral.tsx:388:          {renderChannelSettings('purchase_invoice')}
+src/components/SettingsGeneral.tsx:389:          {renderChannelSettings('delivery_challan_in')}
+src/components/SettingsGeneral.tsx:390:          {renderChannelSettings('delivery_challan_out')}
+src/components/SettingsGeneral.tsx:391:          {renderChannelSettings('inward_payment')}
+src/components/SettingsGeneral.tsx:392:          {renderChannelSettings('outward_payment')}
+src/components/SettingsGeneral.tsx:393:          {renderChannelSettings('credit_note')}
+src/components/SettingsGeneral.tsx:394:          {renderChannelSettings('debit_note')}
+src/components/SettingsGeneral.tsx:395:        </div>
+src/components/SettingsGeneral.tsx:396:        <Button onClick={handleSave} className="mt-4">Save All Settings</Button>
+src/components/SettingsGeneral.tsx:397:
+src/components/SettingsGeneral.tsx:398:        <div className="pt-6 mt-6 border-t space-y-4">
+src/components/SettingsGeneral.tsx:399:          <h3 className="font-bold text-slate-800 dark:text-slate-200">Barcode Label Templates</h3>
+src/components/SettingsGeneral.tsx:400:          <div className="space-y-5">
+src/components/SettingsGeneral.tsx:401:            {(['barcode', 'qr', 'both'] as const).map(ct => {
+src/components/SettingsGeneral.tsx:402:              const groupChannelKey = `barcode_label_${ct}`;
+src/components/SettingsGeneral.tsx:403:              const groupTemplates = labelTemplates.filter(t => t.printer_size === `label-${ct}`);
+src/components/SettingsGeneral.tsx:404:              const groupSelectedId = selections[groupChannelKey];
+src/components/SettingsGeneral.tsx:405:              return (
+src/components/SettingsGeneral.tsx:406:                <div key={ct}>
+src/components/SettingsGeneral.tsx:407:                  <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+src/components/SettingsGeneral.tsx:408:                    {ct === 'barcode' ? 'Barcode' : ct === 'qr' ? 'QR Code' : 'Both (Barcode + QR)'}
+src/components/SettingsGeneral.tsx:409:                  </h4>
+src/components/SettingsGeneral.tsx:410:                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-xl">
+src/components/SettingsGeneral.tsx:411:                    {groupTemplates.map(t => (
+src/components/SettingsGeneral.tsx:412:                      <div key={t.id} className={`relative border-2 rounded-lg overflow-hidden ${groupSelectedId === t.id ? 'border-blue-500' : 'border-slate-200 dark:border-slate-700'}`}>
+src/components/SettingsGeneral.tsx:413:                        <button type="button" onClick={() => handleSelectTemplate(groupChannelKey, `label-${ct}`, t.id)} className="block w-full">
+src/components/SettingsGeneral.tsx:414:                          <div style={{ height: '90px', overflow: 'hidden', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+src/components/SettingsGeneral.tsx:415:                            <div style={{ transform: 'scale(0.9)' }}>
+src/components/SettingsGeneral.tsx:416:                              <BillPreview blocks={t.blocks} printerSize="label" labelData={sampleLabelData} labelWidthMm={labelSettings.unit === 'mm' ? labelSettings.width : 40} labelHeightMm={labelSettings.unit === 'mm' ? labelSettings.height : 25} />
+src/components/SettingsGeneral.tsx:417:                            </div>
+src/components/SettingsGeneral.tsx:418:                          </div>
+src/components/SettingsGeneral.tsx:419:                          <div className="px-2 py-1 text-xs font-medium bg-white dark:bg-slate-950 flex items-center justify-between">
+src/components/SettingsGeneral.tsx:420:                            {t.style_name}
+src/components/SettingsGeneral.tsx:421:                            {groupSelectedId === t.id && <Check size={12} className="text-blue-500" />}
+src/components/SettingsGeneral.tsx:422:                          </div>
+src/components/SettingsGeneral.tsx:423:                        </button>
+src/components/SettingsGeneral.tsx:424:                        <button
+src/components/SettingsGeneral.tsx:425:                          type="button"
+src/components/SettingsGeneral.tsx:426:                          onClick={(e) => { e.stopPropagation(); setViewingTemplate({ template: t, printerSize: 'label', channel: groupChannelKey }); }}
+src/components/SettingsGeneral.tsx:427:                          className="absolute top-1 right-1 bg-white dark:bg-slate-900 rounded-full p-1 shadow border border-slate-200 dark:border-slate-700"
+src/components/SettingsGeneral.tsx:428:                          title="View full size"
+src/components/SettingsGeneral.tsx:429:                        >
+src/components/SettingsGeneral.tsx:430:                          <Eye size={12} />
+src/components/SettingsGeneral.tsx:431:                        </button>
+src/components/SettingsGeneral.tsx:432:                      </div>
+src/components/SettingsGeneral.tsx:433:                    ))}
+src/components/SettingsGeneral.tsx:434:                    <button
+src/components/SettingsGeneral.tsx:435:                      type="button"
+src/components/SettingsGeneral.tsx:436:                      onClick={() => toast.info('Custom Template Builder is coming in the next step.')}
+src/components/SettingsGeneral.tsx:437:                      className="border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 text-xs text-slate-500 h-[123px]"
+src/components/SettingsGeneral.tsx:438:                    >
+src/components/SettingsGeneral.tsx:439:                      <Plus size={18} />
+src/components/SettingsGeneral.tsx:440:                      Create Custom Template
+src/components/SettingsGeneral.tsx:441:                    </button>
+src/components/SettingsGeneral.tsx:442:                  </div>
+src/components/SettingsGeneral.tsx:443:                </div>
+src/components/SettingsGeneral.tsx:444:              );
+src/components/SettingsGeneral.tsx:445:            })}
+src/components/SettingsGeneral.tsx:446:          </div>
+src/components/SettingsGeneral.tsx:447:          <h3 className="font-bold text-slate-800 dark:text-slate-200 pt-2">Barcode Label Roll Size</h3>
+src/components/SettingsGeneral.tsx:448:          <p className="text-sm text-slate-500 dark:text-slate-400">Set this to match the label roll loaded in your barcode/label printer.</p>
+src/components/SettingsGeneral.tsx:449:          <div className="space-y-2 max-w-md">
+src/components/SettingsGeneral.tsx:450:            {sizePresets.map(preset => (
+src/components/SettingsGeneral.tsx:451:              <div key={preset.id} className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-white dark:bg-slate-950">
+src/components/SettingsGeneral.tsx:452:                <div className="text-sm">
+src/components/SettingsGeneral.tsx:453:                  <span className="font-medium">{preset.preset_name}</span>
+src/components/SettingsGeneral.tsx:454:                  <span className="text-slate-500 ml-2">{preset.width}x{preset.height}{preset.unit}</span>
+src/components/SettingsGeneral.tsx:455:                  {preset.is_default && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Default</span>}
+src/components/SettingsGeneral.tsx:456:                </div>
+src/components/SettingsGeneral.tsx:457:                <div className="flex gap-1">
+src/components/SettingsGeneral.tsx:458:                  {!preset.is_default && (
+src/components/SettingsGeneral.tsx:459:                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleSetDefaultPreset(preset.id)}>Set Default</Button>
+src/components/SettingsGeneral.tsx:460:                  )}
+src/components/SettingsGeneral.tsx:461:                  <Button size="sm" variant="outline" className="h-7 text-xs text-red-600" onClick={() => handleDeletePreset(preset.id)}>Delete</Button>
+src/components/SettingsGeneral.tsx:462:                </div>
+src/components/SettingsGeneral.tsx:463:              </div>
+src/components/SettingsGeneral.tsx:464:            ))}
+src/components/SettingsGeneral.tsx:465:
+src/components/SettingsGeneral.tsx:466:            {showAddPreset ? (
+src/components/SettingsGeneral.tsx:467:              <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-900 space-y-2">
+src/components/SettingsGeneral.tsx:468:                <Input placeholder="Size name (e.g. Small Roll)" value={newPresetName} onChange={e => setNewPresetName(e.target.value)} />
+src/components/SettingsGeneral.tsx:469:                <div className="flex items-end gap-2">
+src/components/SettingsGeneral.tsx:470:                  <div className="space-y-1">
+src/components/SettingsGeneral.tsx:471:                    <label className="text-xs">Width</label>
+src/components/SettingsGeneral.tsx:472:                    <Input type="number" min={1} step="0.1" className="w-20" value={newPresetWidth} onChange={e => setNewPresetWidth(e.target.value)} />
+src/components/SettingsGeneral.tsx:473:                  </div>
+src/components/SettingsGeneral.tsx:474:                  <div className="space-y-1">
+src/components/SettingsGeneral.tsx:475:                    <label className="text-xs">Height</label>
+src/components/SettingsGeneral.tsx:476:                    <Input type="number" min={1} step="0.1" className="w-20" value={newPresetHeight} onChange={e => setNewPresetHeight(e.target.value)} />
+src/components/SettingsGeneral.tsx:477:                  </div>
+src/components/SettingsGeneral.tsx:478:                  <div className="space-y-1">
+src/components/SettingsGeneral.tsx:479:                    <label className="text-xs">Unit</label>
+src/components/SettingsGeneral.tsx:480:                    <select className="border rounded-md h-9 px-2 text-sm bg-white dark:bg-slate-950" value={newPresetUnit} onChange={e => setNewPresetUnit(e.target.value as 'mm' | 'cm' | 'in')}>
+src/components/SettingsGeneral.tsx:481:                      <option value="mm">mm</option>
+src/components/SettingsGeneral.tsx:482:                      <option value="cm">cm</option>
+src/components/SettingsGeneral.tsx:483:                      <option value="in">inch</option>
+src/components/SettingsGeneral.tsx:484:                    </select>
+src/components/SettingsGeneral.tsx:485:                  </div>
+src/components/SettingsGeneral.tsx:486:                  <Button onClick={handleAddPreset}>Save</Button>
+src/components/SettingsGeneral.tsx:487:                  <Button variant="outline" onClick={() => setShowAddPreset(false)}>Cancel</Button>
+src/components/SettingsGeneral.tsx:488:                </div>
+src/components/SettingsGeneral.tsx:489:              </div>
+src/components/SettingsGeneral.tsx:490:            ) : (
+src/components/SettingsGeneral.tsx:491:              <Button variant="outline" onClick={() => setShowAddPreset(true)}>+ Add Custom Size</Button>
+src/components/SettingsGeneral.tsx:492:            )}
+src/components/SettingsGeneral.tsx:493:          </div>
+src/components/SettingsGeneral.tsx:494:        </div>
+src/components/SettingsGeneral.tsx:495:
+src/components/SettingsGeneral.tsx:496:        <div className="pt-6 mt-6 border-t space-y-4">
+src/components/SettingsGeneral.tsx:497:          <h3 className="font-bold text-slate-800 dark:text-slate-200">Branding</h3>
+src/components/SettingsGeneral.tsx:498:          <p className="text-sm text-slate-500 dark:text-slate-400">Control what business identity elements appear on your printed bills.</p>
+src/components/SettingsGeneral.tsx:499:
+src/components/SettingsGeneral.tsx:500:          <div className="flex items-center gap-4">
+src/components/SettingsGeneral.tsx:501:            {brandingSettings.stamp_url && (
+src/components/SettingsGeneral.tsx:502:              <img src={brandingSettings.stamp_url} alt="Stamp" className="h-16 w-16 object-contain border rounded-lg bg-white" />
+src/components/SettingsGeneral.tsx:503:            )}
+src/components/SettingsGeneral.tsx:504:            <div>
+src/components/SettingsGeneral.tsx:505:              <input type="file" accept="image/*" ref={stampInputRef} className="hidden" onChange={handleStampUpload} />
+src/components/SettingsGeneral.tsx:506:              <Button variant="outline" onClick={() => stampInputRef.current?.click()}>
+src/components/SettingsGeneral.tsx:507:                {brandingSettings.stamp_url ? 'Change Stamp/Signature Image' : 'Upload Stamp/Signature Image'}
+src/components/SettingsGeneral.tsx:508:              </Button>
+src/components/SettingsGeneral.tsx:509:              <p className="text-xs text-slate-500 mt-1">Appears near the signature area on printed bills.</p>
+src/components/SettingsGeneral.tsx:510:            </div>
+src/components/SettingsGeneral.tsx:511:          </div>
+src/components/SettingsGeneral.tsx:512:
+src/components/SettingsGeneral.tsx:513:          <div className="space-y-2">
+src/components/SettingsGeneral.tsx:514:            <label className="flex items-center gap-2 text-sm">
+src/components/SettingsGeneral.tsx:515:              <input
+src/components/SettingsGeneral.tsx:516:                type="checkbox"
+src/components/SettingsGeneral.tsx:517:                checked={brandingSettings.show_branch_name !== false}
+src/components/SettingsGeneral.tsx:518:                onChange={e => handleToggleBranding('show_branch_name', e.target.checked)}
+src/components/SettingsGeneral.tsx:519:              />
+src/components/SettingsGeneral.tsx:520:              Show Branch Name on Bill
+src/components/SettingsGeneral.tsx:521:            </label>
+src/components/SettingsGeneral.tsx:522:            <label className="flex items-center gap-2 text-sm">
+src/components/SettingsGeneral.tsx:523:              <input
+src/components/SettingsGeneral.tsx:524:                type="checkbox"
+src/components/SettingsGeneral.tsx:525:                checked={brandingSettings.show_branch_address !== false}
+src/components/SettingsGeneral.tsx:526:                onChange={e => handleToggleBranding('show_branch_address', e.target.checked)}
+src/components/SettingsGeneral.tsx:527:              />
+src/components/SettingsGeneral.tsx:528:              Show Branch Address on Bill
+src/components/SettingsGeneral.tsx:529:            </label>
+src/components/SettingsGeneral.tsx:530:          </div>
+src/components/SettingsGeneral.tsx:531:
+src/components/SettingsGeneral.tsx:532:          <div className="space-y-2 pt-3 border-t">
+src/components/SettingsGeneral.tsx:533:            <label className="text-sm font-medium">Bill Number Code (on printed bill)</label>
+src/components/SettingsGeneral.tsx:534:            <div className="flex gap-4 text-sm">
+src/components/SettingsGeneral.tsx:535:              {(['none', 'barcode', 'qr', 'both'] as const).map(ct => (
+src/components/SettingsGeneral.tsx:536:                <label key={ct} className="flex items-center gap-1.5">
+src/components/SettingsGeneral.tsx:537:                  <input
+src/components/SettingsGeneral.tsx:538:                    type="radio"
+src/components/SettingsGeneral.tsx:539:                    name="billNumberCodeType"
+src/components/SettingsGeneral.tsx:540:                    checked={(brandingSettings.bill_number_code_type || 'none') === ct}
+src/components/SettingsGeneral.tsx:541:                    onChange={() => handleToggleBranding('bill_number_code_type' as any, ct as any)}
+src/components/SettingsGeneral.tsx:542:                  />
+src/components/SettingsGeneral.tsx:543:                  {ct === 'none' ? 'None' : ct === 'barcode' ? 'Barcode' : ct === 'qr' ? 'QR Code' : 'Both'}
+src/components/SettingsGeneral.tsx:544:                </label>
+src/components/SettingsGeneral.tsx:545:              ))}
+src/components/SettingsGeneral.tsx:546:            </div>
+src/components/SettingsGeneral.tsx:547:          </div>
+src/components/SettingsGeneral.tsx:548:
+src/components/SettingsGeneral.tsx:549:          <div className="pt-3 border-t">
+src/components/SettingsGeneral.tsx:550:            <label className="flex items-center gap-2 text-sm">
+src/components/SettingsGeneral.tsx:551:              <input
+src/components/SettingsGeneral.tsx:552:                type="checkbox"
+src/components/SettingsGeneral.tsx:553:                checked={brandingSettings.show_upi_qr_on_credit === true}
+src/components/SettingsGeneral.tsx:554:                onChange={e => handleToggleBranding('show_upi_qr_on_credit' as any, e.target.checked as any)}
+src/components/SettingsGeneral.tsx:555:              />
+src/components/SettingsGeneral.tsx:556:              Show UPI Payment QR on Credit bills
+src/components/SettingsGeneral.tsx:557:            </label>
+src/components/SettingsGeneral.tsx:558:          </div>
+src/components/SettingsGeneral.tsx:559:
+src/components/SettingsGeneral.tsx:560:          {brandingSettings.show_upi_qr_on_credit && (
+src/components/SettingsGeneral.tsx:561:            <div className="space-y-2 pl-6">
+src/components/SettingsGeneral.tsx:562:              <label className="text-sm font-medium">Payment QR Source</label>
+src/components/SettingsGeneral.tsx:563:              <div className="flex flex-col gap-2 text-sm">
+src/components/SettingsGeneral.tsx:564:                <label className="flex items-start gap-2">
+src/components/SettingsGeneral.tsx:565:                  <input
+src/components/SettingsGeneral.tsx:566:                    type="radio"
+src/components/SettingsGeneral.tsx:567:                    name="creditQrProvider"
+src/components/SettingsGeneral.tsx:568:                    checked={(brandingSettings.credit_qr_provider || 'razorpay') === 'razorpay'}
+src/components/SettingsGeneral.tsx:569:                    onChange={() => handleToggleBranding('credit_qr_provider' as any, 'razorpay' as any)}
+src/components/SettingsGeneral.tsx:570:                  />
+src/components/SettingsGeneral.tsx:571:                  <span>
+src/components/SettingsGeneral.tsx:572:                    <span className="font-medium">Use Razorpay QR (Recommended)</span>
+src/components/SettingsGeneral.tsx:573:                    <br />
+src/components/SettingsGeneral.tsx:574:                    <span className="text-xs text-slate-500">Payment is tracked automatically and the bill marks itself Paid once received.</span>
+src/components/SettingsGeneral.tsx:575:                  </span>
+src/components/SettingsGeneral.tsx:576:                </label>
+src/components/SettingsGeneral.tsx:577:                <label className="flex items-start gap-2">
+src/components/SettingsGeneral.tsx:578:                  <input
+src/components/SettingsGeneral.tsx:579:                    type="radio"
+src/components/SettingsGeneral.tsx:580:                    name="creditQrProvider"
+src/components/SettingsGeneral.tsx:581:                    checked={brandingSettings.credit_qr_provider === 'custom_upi'}
+src/components/SettingsGeneral.tsx:582:                    onChange={() => handleToggleBranding('credit_qr_provider' as any, 'custom_upi' as any)}
+src/components/SettingsGeneral.tsx:583:                  />
+src/components/SettingsGeneral.tsx:584:                  <span>
+src/components/SettingsGeneral.tsx:585:                    <span className="font-medium">Use my own UPI ID</span>
+src/components/SettingsGeneral.tsx:586:                    <br />
+src/components/SettingsGeneral.tsx:587:                    <span className="text-xs text-slate-500">Uses the UPI ID set in Branch Settings. Payment is NOT tracked automatically — you'll need to mark the bill Paid manually after confirming payment yourself.</span>
+src/components/SettingsGeneral.tsx:588:                  </span>
+src/components/SettingsGeneral.tsx:589:                </label>
+src/components/SettingsGeneral.tsx:590:              </div>
+src/components/SettingsGeneral.tsx:591:            </div>
+src/components/SettingsGeneral.tsx:592:          )}
+src/components/SettingsGeneral.tsx:593:        </div>
+src/components/SettingsGeneral.tsx:594:      </CardContent>
+src/components/SettingsGeneral.tsx:595:    </Card>
+src/components/SettingsGeneral.tsx:596:      {viewingTemplate && (
+src/components/SettingsGeneral.tsx:597:        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={() => setViewingTemplate(null)}>
+src/components/SettingsGeneral.tsx:598:          <div className="bg-white dark:bg-slate-950 rounded-xl max-w-[95vw] max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+src/components/SettingsGeneral.tsx:599:            <div className="flex justify-between items-center p-3 border-b sticky top-0 bg-white dark:bg-slate-950 z-10">
+src/components/SettingsGeneral.tsx:600:              <span className="font-semibold text-sm">{viewingTemplate.template.style_name} — {viewingTemplate.printerSize}</span>
+src/components/SettingsGeneral.tsx:601:              <button onClick={() => setViewingTemplate(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+src/components/SettingsGeneral.tsx:602:                <X size={18} />
+src/components/SettingsGeneral.tsx:603:              </button>
+src/components/SettingsGeneral.tsx:604:            </div>
+src/components/SettingsGeneral.tsx:605:            {viewingTemplate.channel?.startsWith('barcode_label') ? (
+src/components/SettingsGeneral.tsx:606:              <BillPreview blocks={viewingTemplate.template.blocks} printerSize="label" labelData={sampleLabelData} labelWidthMm={labelSettings.width} labelHeightMm={labelSettings.height} />
+src/components/SettingsGeneral.tsx:607:            ) : (
+src/components/SettingsGeneral.tsx:608:              <BillPreview blocks={viewingTemplate.template.blocks} data={getSampleBillData(viewingTemplate.channel || 'sale_invoice')} printerSize={viewingTemplate.printerSize} />
+src/components/SettingsGeneral.tsx:609:            )}
+src/components/SettingsGeneral.tsx:610:          </div>
+src/components/SettingsGeneral.tsx:611:        </div>
+src/components/SettingsGeneral.tsx:612:      )}
+src/components/SettingsGeneral.tsx:613:    </>
+src/components/SettingsGeneral.tsx:614:  );
+src/components/SettingsGeneral.tsx:615:}
+=== 2 ===
+=== 3 ===
+/app/applet/src/components/retail/CreditNoteList.tsx
+/app/applet/src/components/retail/DebitNoteList.tsx

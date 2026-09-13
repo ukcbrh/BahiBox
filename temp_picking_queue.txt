@@ -1,0 +1,130 @@
+
+
+export const PickingQueuePage = () => {
+  const { currentTenantId } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pickedItems, setPickedItems] = useState<Record<string, Set<string>>>({});
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const fetchOrders = async () => {
+    if (!currentTenantId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setLoading(true);
+    const { data: ordersData } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', currentTenantId)
+      .eq('status', 'New')
+      .order('created_at', { ascending: true });
+
+    if (!ordersData || ordersData.length === 0) { setOrders([]); setLoading(false); return; }
+
+    const orderIds = ordersData.map((o: any) => o.id);
+    const { data: itemsData } = await supabase.from('order_items').select('*').in('order_id', orderIds);
+
+    const productIds = [...new Set((itemsData || []).map((i: any) => i.product_id).filter(Boolean))];
+    let productsData: any[] = [];
+    if (productIds.length > 0) {
+      const { data: pData } = await supabase.from('products').select('id, product_name').in('id', productIds);
+      productsData = pData || [];
+    }
+    setProducts(productsData);
+
+    const merged = ordersData.map((o: any) => ({
+      ...o,
+      items: (itemsData || []).filter((i: any) => i.order_id === o.id)
+    }));
+    setOrders(merged);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchOrders(); }, [currentTenantId]);
+
+  const getProductName = (productId: string) => {
+    const p = products.find((pr: any) => pr.id === productId);
+    return p?.product_name || 'Unknown Product';
+  };
+
+  const toggleItemPicked = (orderId: string, itemId: string) => {
+    setPickedItems(prev => {
+      const orderSet = new Set(prev[orderId] || []);
+      if (orderSet.has(itemId)) orderSet.delete(itemId);
+      else orderSet.add(itemId);
+      return { ...prev, [orderId]: orderSet };
+    });
+  };
+
+  const isOrderFullyPicked = (order: any) => {
+    const pickedSet = pickedItems[order.id] || new Set();
+    return order.items.length > 0 && order.items.every((it: any) => pickedSet.has(it.id));
+  };
+
+  const handleMarkReady = async (orderId: string) => {
+    setUpdating(orderId);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setUpdating(null); return; }
+    const { error } = await supabase.from('orders').update({ status: 'Ready to Pack' }).eq('id', orderId);
+    setUpdating(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Order marked ready to pack');
+    setPickedItems(prev => { const copy = { ...prev }; delete copy[orderId]; return copy; });
+    fetchOrders();
+  };
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Picking Queue</h2>
+        <p className="text-slate-500 dark:text-slate-400">Check off items as you pick them for each new online order.</p>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-slate-400 text-center py-8">Loading...</p>
+      ) : orders.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-slate-400">
+            No new orders to pick right now.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order: any) => {
+            const pickedSet = pickedItems[order.id] || new Set();
+            const fullyPicked = isOrderFullyPicked(order);
+            return (
+              <Card key={order.id}>
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{order.customer_name || 'Guest'}</p>
+                      <p className="text-xs text-slate-500">{order.delivery_address}</p>
+                    </div>
+                    <span className="text-xs font-bold text-primary">{pickedSet.size}/{order.items.length} picked</span>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {order.items.map((item: any) => {
+                      const isPicked = pickedSet.has(item.id);
+                      return (
+                        <label key={item.id} className={"flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors " + (isPicked ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20' : 'border-slate-200 dark:border-slate-800')}>
+                          <input type="checkbox" checked={isPicked} onChange={() => toggleItemPicked(order.id, item.id)} className="w-5 h-5" />
+                          <span className={"flex-1 text-sm " + (isPicked ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100 font-medium')}>{getProductName(item.product_id)}</span>
+                          <span className="text-sm font-bold text-slate-600 dark:text-slate-400">x{item.quantity}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <Button className="w-full h-11" onClick={() => handleMarkReady(order.id)} disabled={!fullyPicked || updating === order.id}>
+                    {updating === order.id ? 'Updating...' : fullyPicked ? 'Mark Picked & Ready to Pack' : 'Pick all items first'}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};

@@ -1,0 +1,134 @@
+  const handleSave = async () => {
+    if (!supplierId || !invoiceNo || items.length === 0) {
+      toast.error('Please fill supplier, invoice number and add at least one item');
+      return;
+    }
+    
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    
+    try {
+      const branchId = activeBranchId;
+      if (!branchId) {
+        toast.error("No active branch selected. Please select a branch from Switch Business.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: po, error: poErr } = await supabase.from('purchase_orders').insert({
+        tenant_id: currentTenantId,
+        branch_id: branchId,
+        supplier_id: supplierId,
+        po_number: invoiceNo,
+        status: 'ordered',
+        total_amount: grandTotal,
+        created_by: user?.id
+      }).select().single();
+      
+      if (poErr) throw poErr;
+
+      const poItems = items.map((item: any) => ({
+        purchase_order_id: po.id,
+        product_id: item.product_id,
+        ordered_quantity: item.qty,
+        unit_cost: item.price,
+        line_total: item.qty * item.price
+        // received_quantity intentionally omitted (defaults to 0) — the 
+        // receive_purchase_order_partial RPC call right below is what 
+        // actually performs the receiving and updates this field. 
+        // Setting it here too was double-counting the same quantity, 
+        // causing "Cannot receive more than ordered" errors.
+      }));
+
+      const { data: insertedItems, error: itemsErr } = await supabase.from('purchase_order_items').insert(poItems).select();
+      if (itemsErr) throw itemsErr;
+
+      const receipts = insertedItems.map((item: any, idx: number) => ({
+        po_item_id: item.id,
+        received_now: item.ordered_quantity,
+        batch_number: items[idx]?.batch || null,
+        expiry_date: items[idx]?.exp_date || null
+      }));
+      const { error: receiveErr } = await supabase.rpc('receive_purchase_order_partial', {
+        p_purchase_order_id: po.id,
+        p_receipts: receipts,
+        p_received_by: user?.id
+      });
+      
+      if (receiveErr) throw receiveErr;
+      
+      // Update products table with modified properties
+      await Promise.all(items.map(async (item) => {
+        if (!item.product_id) return;
+        
+        const payload: any = {};
+        
+        // Include properties that could have been modified
+        if (item.sku !== undefined) payload.sku = item.sku;
+        if (item.barcode !== undefined) payload.barcode = item.barcode;
+        if (item.batch !== undefined) payload.batch = item.batch;
+        if (item.mfg_date !== undefined) payload.mfg_date = item.mfg_date || null;
+        if (item.exp_date !== undefined) payload.exp_date = item.exp_date || null;
+        if (item.size !== undefined) payload.size = item.size;
+        if (item.colour !== undefined) payload.colour = item.colour;
+        if (item.selling_price !== undefined) payload.selling_price = item.selling_price;
+        if (item.w_sale_price !== undefined) payload.w_sale_price = item.w_sale_price;
+        if (item.mrp !== undefined) payload.mrp = item.mrp;
+        if (item.discount !== undefined) payload.discount = item.discount;
+        if (item.price !== undefined) payload.purchase_price = item.price; // update purchase price too
+        if (item.hsn_code !== undefined) payload.hsn_code = item.hsn_code;
+        if (item.imei1 !== undefined) payload.imei1 = item.imei1;
+        if (item.imei2 !== undefined) payload.imei2 = item.imei2;
+        if (item.kitchen !== undefined) payload.kitchen = item.kitchen;
+        if (item.description !== undefined) payload.description = item.description;
+        if (item.sales_unit !== undefined) payload.sales_unit = item.sales_unit;
+        if (item.sales_alt_unit !== undefined) payload.sales_alt_unit = item.sales_alt_unit;
+        if (item.conv !== undefined) payload.conv = item.conv;
+        if (item.min_stock !== undefined) payload.min_stock = item.min_stock;
+        if (item.status !== undefined) payload.status = item.status;
+        if (item.g_down !== undefined) payload.g_down = item.g_down;
+        if (item.rack !== undefined) payload.rack = item.rack;
+        if (item.def_qty !== undefined) payload.def_qty = item.def_qty;
+        if (item.part_no !== undefined) payload.part_no = item.part_no;
+        if (item.cmb_gst !== undefined) payload.cmb_gst = item.cmb_gst;
+        
+        await supabase.from('products').update(payload).eq('id', item.product_id);
+      }));
+
+      const foundSupplier = suppliers.find((s: any) => s.id === supplierId);
+      const { data: branchInfo } = await supabase.from('branches').select('branch_name, address').eq('id', branchId).maybeSingle();
+      const { data: brandingInfo } = await supabase.from('print_branding_settings').select('*').eq('tenant_id', currentTenantId).maybeSingle();
+      const { data: tenantData } = await supabase.from('tenants').select('business_name').eq('id', currentTenantId).maybeSingle();
+
+      const billData: BillData = {
+        business: {
+          name: tenantData?.business_name || 'Your Business',
+          branch_name: branchInfo?.branch_name,
+          address: branchInfo?.address,
+          show_branch_name: brandingInfo?.show_branch_name !== false,
+          show_branch_address: brandingInfo?.show_branch_address !== false,
+          stamp_url: brandingInfo?.stamp_url
+        },
+        customer: foundSupplier ? {
+          name: foundSupplier.supplier_name || foundSupplier.name || foundSupplier.business_name || 'Supplier',
+          phone: foundSupplier.phone,
+          address: foundSupplier.address
+        } : undefined,
+        customer_info_label: 'Supplier',
+        meta: { label: 'Purchase Invoice', number: invoiceNo, date: new Date(invoiceDate).toLocaleDateString() },
+        items: items.map((item: any) => ({
+          name: item.name,
+          hsn: item.hsn_code,
+          qty: item.qty,
+          rate: item.price,
+          amount: item.qty * item.price
+        })),
+        totals: {
+          grand_total: grandTotal
+        },
+        footer: {
+          stamp_url: brandingInfo?.stamp_url
+        },
+        bill_number_code_type: brandingInfo?.bill_number_code_type || 'none'
+      };

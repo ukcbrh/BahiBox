@@ -1,0 +1,28 @@
+import React, { useState, useEffect } from 'react';
+const [customers, setCustomers] = useState<any[]>([]);
+const [invoicePrefix, setInvoicePrefix] = useState('');
+const [invoiceNumberPart, setInvoiceNumberPart] = useState('');
+const [invoiceSuffix, setInvoiceSuffix] = useState('');
+const [invoiceType, setInvoiceType] = useState('b2b');
+const [challanNo, setChallanNo] = useState('');
+const [challanDate, setChallanDate] = useState('');
+const [poNo, setPoNo] = useState('');
+const [poDate, setPoDate] = useState('');
+const [lrNo, setLrNo] = useState('');
+const [ewayNo, setEwayNo] = useState('');
+const [deliveryMode, setDeliveryMode] = useState('');
+const [isReverseCharge, setIsReverseCharge] = useState(false);
+const [shipToSame, setShipToSame] = useState(true);
+const [visibleColumns, setVisibleColumns] = useState(() => {
+const [showColumnSettings, setShowColumnSettings] = useState(false);
+const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+const [customerSearch, setCustomerSearch] = useState('');
+const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+const [products, setProducts] = useState<any[]>([]);
+const [productSearch, setProductSearch] = useState('');
+const [showProductDropdown, setShowProductDropdown] = useState(false);
+const [items, setItems] = useState<ItemRow[]>([]);
+const [paymentMethod, setPaymentMethod] = useState<'credit' | 'cash' | 'cheque' | 'online'>('cash');
+const [saving, setSaving] = useState(false);
+const [successInvoice, setSuccessInvoice] = useState<any>(null);

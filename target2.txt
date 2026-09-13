@@ -1,0 +1,5 @@
+const tenantId = qrCodeEntity.notes?.tenant_id;
+        const branchId = qrCodeEntity.notes?.branch_id;
+        const invoiceId = qrCodeEntity.notes?.invoice_id;
+
+        if (invoiceId) {

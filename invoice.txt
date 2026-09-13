@@ -1,0 +1,406 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Plus, Edit2, RotateCcw, Save, Printer, ArrowLeft, Trash2, Settings, MoreVertical } from 'lucide-react';
+
+interface CreateSaleInvoiceProps {
+  onBack: () => void;
+}
+
+export function CreateSaleInvoice({ onBack }: CreateSaleInvoiceProps) {
+  return (
+    <div className="space-y-4 max-w-[1400px] mx-auto animate-in fade-in duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+          <Edit2 className="h-5 w-5" />
+          <h2 className="text-xl font-semibold">Create Sale Invoice</h2>
+        </div>
+        <Button className="bg-[#00b884] hover:bg-[#00a375] text-white border-none shadow-sm h-9">
+          <Plus className="mr-2 h-4 w-4" /> Create Another Invoice
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Customer Information */}
+        <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+          <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Customer Information</CardTitle>
+            <MoreVertical className="h-4 w-4 text-slate-400 cursor-pointer" />
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">M/S.<span className="text-red-500">*</span></label>
+              <Input className="h-9" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400 mt-2">Address</label>
+              <textarea className="flex w-full rounded-md border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950 resize-none min-h-[60px]" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Contact Person</label>
+              <Input className="h-9" placeholder="Contact Person" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Phone No</label>
+              <Input className="h-9" placeholder="Phone No" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">GSTIN / PAN</label>
+              <Input className="h-9" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Rev. Charge</label>
+              <select className="flex h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
+                <option>No</option>
+                <option>Yes</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Ship To</label>
+              <select className="flex h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
+                <option>--</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Place of Supply<span className="text-red-500">*</span></label>
+              <Input className="h-9" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Invoice Detail */}
+        <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+          <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+            <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Invoice Detail</CardTitle>
+            <RotateCcw className="h-4 w-4 text-slate-400 cursor-pointer" />
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Invoice Type</label>
+              <select className="flex h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
+                <option></option>
+              </select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Invoice No.<span className="text-red-500">*</span></label>
+                <div className="flex gap-2">
+                  <Input className="h-9 w-24 bg-slate-50 dark:bg-slate-900" defaultValue="SS/2026-27/" readOnly />
+                  <Input className="h-9 flex-1" defaultValue="1" />
+                  <Button variant="outline" className="h-9 px-2 text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800">Inv Post.</Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-[60px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Date<span className="text-red-500">*</span></label>
+                <Input type="text" className="h-9" defaultValue="09-Jul-2026" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Challan No.</label>
+                <Input className="h-9" placeholder="Challan No." />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Challan Date</label>
+                <Input className="h-9" placeholder="dd/mm/yy" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">P.O. No.</label>
+                <Input className="h-9" placeholder="P.O. No." />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">P.O. Date</label>
+                <Input className="h-9" placeholder="dd/mm/yy" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">L.R. No.</label>
+                <Input className="h-9" placeholder="L.R. No." />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">E-Way No.</label>
+                <Input className="h-9" placeholder="E-Way No." />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Delivery</label>
+              <select className="flex h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
+                <option>Select Delivery Mode</option>
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Product Items Table */}
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 overflow-hidden">
+        <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Product Items</CardTitle>
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <span>Discount:</span>
+            <div className="flex border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden bg-white dark:bg-slate-950">
+              <button className="px-3 py-1 border-r border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900">Rs</button>
+              <button className="px-3 py-1 bg-[#00b884] text-white">%</button>
+            </div>
+            <button className="ml-2 p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </div>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th className="px-4 py-3 w-12 text-center border-r border-slate-200 dark:border-slate-800">SR.</th>
+                <th className="px-4 py-3 border-r border-slate-200 dark:border-slate-800">PRODUCT / OTHER CHARGES</th>
+                <th className="px-4 py-3 w-24 text-center border-r border-slate-200 dark:border-slate-800">MRP</th>
+                <th className="px-4 py-3 w-28 text-center border-r border-slate-200 dark:border-slate-800">HSN/SAC CODE</th>
+                <th className="px-4 py-3 w-28 text-center border-r border-slate-200 dark:border-slate-800">QTY. / STOCK</th>
+                <th className="px-4 py-3 w-20 text-center border-r border-slate-200 dark:border-slate-800">UOM</th>
+                <th className="px-4 py-3 w-28 text-center border-r border-slate-200 dark:border-slate-800">PRICE (RS)</th>
+                <th className="px-4 py-3 w-24 text-center border-r border-slate-200 dark:border-slate-800">DISCOUNT</th>
+                <th className="px-4 py-3 w-32 text-center border-r border-slate-200 dark:border-slate-800">RATE (INCL. OF TAX)</th>
+                <th className="px-4 py-3 w-28 text-center border-r border-slate-200 dark:border-slate-800">IGST</th>
+                <th className="px-4 py-3 w-32 text-center">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                <td className="px-4 py-3 text-center border-r border-slate-200 dark:border-slate-800 font-medium text-slate-700 dark:text-slate-300">1</td>
+                <td className="p-0 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full px-4 py-2 border-b border-slate-100 dark:border-slate-800 bg-amber-50/30 outline-none text-sm placeholder:text-slate-400 focus:bg-white dark:bg-slate-950" placeholder="Enter Product name" />
+                  <div className="relative">
+                    <textarea className="w-full px-4 py-2 bg-amber-50/30 outline-none text-xs text-slate-500 dark:text-slate-400 placeholder:text-slate-400 resize-none h-16 focus:bg-white dark:bg-slate-950" placeholder="Item Note..."></textarea>
+                    <Edit2 className="absolute bottom-2 right-2 h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400" placeholder="MRP" />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400" placeholder="HSN/SAC" />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400" placeholder="Qty." />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400" placeholder="UOM" />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400" placeholder="Price" />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-center">
+                  <span className="text-slate-700 dark:text-slate-300">0</span>
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400 text-xs" placeholder="Rate (Incl. Of Tax)" />
+                </td>
+                <td className="px-2 py-3 border-r border-slate-200 dark:border-slate-800 align-top">
+                  <div className="flex flex-col items-center gap-1">
+                    <select className="w-full text-center outline-none bg-transparent text-slate-500 dark:text-slate-400 text-xs cursor-pointer border-b border-slate-200 dark:border-slate-800 pb-1">
+                      <option>--</option>
+                    </select>
+                    <span className="text-slate-700 dark:text-slate-300 text-xs mt-1">0</span>
+                  </div>
+                </td>
+                <td className="px-2 py-3 align-top text-center">
+                   <input type="text" className="w-full text-center outline-none bg-transparent placeholder:text-slate-400 text-slate-500 dark:text-slate-400" placeholder="Total" readOnly />
+                </td>
+              </tr>
+            </tbody>
+            <tfoot className="bg-yellow-100/50 font-semibold text-slate-800 dark:text-slate-200">
+              <tr>
+                <td colSpan={2} className="px-4 py-2 text-right border-r border-slate-200 dark:border-slate-800 text-xs">Total Inv. Val</td>
+                <td className="px-4 py-2 text-center border-r border-slate-200 dark:border-slate-800">0</td>
+                <td className="px-4 py-2 border-r border-slate-200 dark:border-slate-800"></td>
+                <td className="px-4 py-2 text-center border-r border-slate-200 dark:border-slate-800">0</td>
+                <td className="px-4 py-2 border-r border-slate-200 dark:border-slate-800"></td>
+                <td className="px-4 py-2 text-center border-r border-slate-200 dark:border-slate-800">0</td>
+                <td className="px-4 py-2 text-center border-r border-slate-200 dark:border-slate-800">0</td>
+                <td className="px-4 py-2 border-r border-slate-200 dark:border-slate-800"></td>
+                <td className="px-4 py-2 text-center border-r border-slate-200 dark:border-slate-800">0</td>
+                <td className="px-4 py-2 text-center">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 pb-8">
+        {/* Left Bottom section */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Due Date</label>
+            <Input type="text" className="h-9 max-w-sm" defaultValue="16-Jul-2026" />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Bank</label>
+            <select className="flex h-9 w-full max-w-sm rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
+              <option>Indian Bank (6901)</option>
+            </select>
+          </div>
+
+          <div className="space-y-4 pt-4">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Terms & Condition / Additional Note</h3>
+            <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Title</label>
+              <Input className="h-9" defaultValue="Terms and Conditions" />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+              <label className="text-sm text-slate-600 dark:text-slate-400 mt-2">Detail</label>
+              <div className="relative">
+                <textarea className="flex w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950 min-h-[80px]" 
+                  defaultValue={`1.Subject to our home jurisdiction.\n2.Goods once sold will not taken back.\n3.Interest @18% p.a. will be charged if the payment is`}
+                />
+                <div className="absolute right-2 top-2 bottom-2 flex flex-col justify-between items-end pointer-events-none">
+                  <div className="w-4 border-b-2 border-slate-400"></div>
+                  <Edit2 className="h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+            </div>
+            <Button variant="outline" className="h-8 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800">
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add Notes
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-[120px_1fr] items-start gap-4 pt-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400 mt-2 text-wrap w-24">
+              Document Note / Remarks
+              <span className="block text-xs text-slate-400 italic font-normal mt-1">Not Visible on Print</span>
+            </label>
+            <div className="relative">
+              <textarea className="flex w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-950 min-h-[60px]" />
+              <Edit2 className="absolute right-2 bottom-2 h-4 w-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Bottom Section (Totals & Actions) */}
+        <div className="space-y-6">
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-600 dark:text-slate-400">Taxable</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">0</span>
+            </div>
+            
+            <div className="py-1">
+              <button className="text-[#00b884] hover:underline text-xs font-medium">Add Additional Charge</button>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-600 dark:text-slate-400">Total Taxable</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">0</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-600 dark:text-slate-400">Total Tax</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">0</span>
+            </div>
+
+            <div className="flex items-center gap-2 py-2">
+              <div className="w-24 border border-dashed border-slate-300 dark:border-slate-700 text-center py-1 rounded bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-xs">TCS</div>
+              <div className="flex-1 flex gap-2 justify-end items-center">
+                <select className="h-8 border border-slate-200 dark:border-slate-800 rounded px-2 outline-none text-xs w-16">
+                  <option>+</option>
+                  <option>-</option>
+                </select>
+                <select className="h-8 border border-slate-200 dark:border-slate-800 rounded px-2 outline-none text-xs w-16">
+                  <option>%</option>
+                  <option>Rs</option>
+                </select>
+              </div>
+            </div>
+            <div className="text-right text-xs font-semibold text-slate-800 dark:text-slate-200">₹ 0</div>
+
+            <div className="flex items-center gap-2 py-2">
+              <div className="w-24 border border-dashed border-slate-300 dark:border-slate-700 text-center py-1 rounded bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 text-xs">Discount</div>
+              <div className="flex-1 flex gap-2 justify-end items-center">
+                <select className="h-8 border border-slate-200 dark:border-slate-800 rounded px-2 outline-none text-xs w-16">
+                  <option>-</option>
+                  <option>+</option>
+                </select>
+                <select className="h-8 border border-slate-200 dark:border-slate-800 rounded px-2 outline-none text-xs w-16">
+                  <option>Rs</option>
+                  <option>%</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-600 dark:text-slate-400">Round Off</span>
+                <div className="w-8 h-4 bg-[#00b884] rounded-full relative cursor-pointer">
+                  <div className="w-3 h-3 bg-white dark:bg-slate-950 rounded-full absolute right-0.5 top-0.5"></div>
+                </div>
+              </div>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">0</span>
+            </div>
+
+            <div className="flex justify-between items-center py-3 bg-yellow-100/50 px-2 -mx-2">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Grand Total</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">0</span>
+            </div>
+
+            <div className="pt-2">
+              <span className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Total in words</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">ZERO RUPEES ONLY</span>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <span className="text-slate-600 dark:text-slate-400">Payment Type<span className="text-red-500">*</span></span>
+                <div className="flex flex-wrap gap-2">
+                  <button className="px-3 py-1 text-xs font-semibold rounded border border-yellow-400 text-yellow-600 hover:bg-yellow-50">CREDIT</button>
+                  <button className="px-3 py-1 text-xs font-semibold rounded border border-[#00b884] text-[#00b884] hover:bg-[#00b884]/10">CASH</button>
+                  <button className="px-3 py-1 text-xs font-semibold rounded border border-[#00b884] text-[#00b884] hover:bg-[#00b884]/10">CHEQUE</button>
+                  <button className="px-3 py-1 text-xs font-semibold rounded border border-purple-400 text-purple-600 bg-purple-50">ONLINE</button>
+                </div>
+              </div>
+              <div className="text-right mt-2">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 border-b border-slate-300 dark:border-slate-700 pb-0.5 uppercase tracking-wider">RECIVED BY UPI INDIAN BANK</span>
+              </div>
+            </div>
+
+            <div className="pt-6">
+              <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">Smart Suggestion</span>
+                <button className="bg-[#00b884] text-white p-1 rounded-sm hover:bg-[#00a375]">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-6 gap-2">
+              <div className="flex gap-2">
+                <Button variant="outline" className="h-9 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" onClick={onBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button variant="outline" className="h-9 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  <Trash2 className="mr-2 h-4 w-4" /> Discard
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button className="h-9 bg-[#00b884] hover:bg-[#00a375] text-white">
+                  <Printer className="mr-2 h-4 w-4" /> Save & Print
+                </Button>
+                <Button className="h-9 bg-[#00b884] hover:bg-[#00a375] text-white px-6">
+                  <Save className="mr-2 h-4 w-4" /> Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

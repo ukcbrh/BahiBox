@@ -1,0 +1,6 @@
+
+> react-example@0.0.0 lint
+> tsc --noEmit
+
+---
+115:                  debugLog('[DEBUG] Aborting logout — effect re-ran with fresh data during consumer-lookup.');

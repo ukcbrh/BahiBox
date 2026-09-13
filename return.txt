@@ -1,0 +1,395 @@
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center space-y-4">
+        <CheckCircle2 className="h-16 w-16 text-[#00b884] mx-auto" />
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Invoice Created!</h2>
+        <p className="text-slate-500 dark:text-slate-400">{successInvoice.invoice_number}</p>
+        <p className="text-3xl font-bold text-slate-900 dark:text-white">₹{Number(successInvoice.total_amount).toFixed(2)}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Status: {successInvoice.status}</p>
+        <div className="flex gap-3 justify-center pt-4">
+          <Button variant="outline" onClick={onBack}>Back to List</Button>
+          <Button
+            className="bg-[#00b884] hover:bg-[#00a375] text-white"
+            onClick={() => { setSuccessInvoice(null); setItems([]); setSelectedCustomer(null); setCustomerSearch(''); }}
+          >
+            Create Another Invoice
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 max-w-[1400px] mx-auto animate-in fade-in duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+          <Edit2 className="h-5 w-5" />
+          <h2 className="text-xl font-semibold">Create Sale Invoice (B2B)</h2>
+        </div>
+        <Button variant="outline" onClick={onBack} className="h-9">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to List
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 h-full">
+        <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Customer Information</CardTitle>
+          {selectedCustomer && <Button variant="outline" size="sm" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }}>Change</Button>}
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">M/S.<span className="text-red-500">*</span></label>
+            <div className="relative w-full">
+              <Input
+                className="h-9 w-full"
+                placeholder="Type to search customer..."
+                value={selectedCustomer ? selectedCustomer.customer_name : customerSearch}
+                onChange={e => {
+                  if (selectedCustomer) setSelectedCustomer(null);
+                  setCustomerSearch(e.target.value);
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+              />
+              {showCustomerDropdown && !selectedCustomer && (
+                <div className="absolute z-50 w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md shadow-lg max-h-[200px] overflow-y-auto mt-1">
+                  {filteredCustomers.length === 0 ? (
+                    <p className="p-3 text-sm text-slate-400">No customers found. Add one via Customer/Supplier tab first.</p>
+                  ) : filteredCustomers.map(c => (
+                    <div
+                      key={c.id}
+                      className="px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer text-sm"
+                      onClick={() => { setSelectedCustomer(c); setCustomerSearch(c.customer_name); setShowCustomerDropdown(false); }}
+                    >
+                      {c.customer_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400 mt-2">Address</label>
+            <textarea
+              className="flex w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 text-sm outline-none resize-none min-h-[60px]"
+              readOnly
+              value={selectedCustomer ? `${selectedCustomer.address || ''} ${selectedCustomer.city || ''} ${selectedCustomer.pincode || ''}`.trim() : ''}
+            />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">State</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.state || ''} placeholder="State" />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Phone No</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.phone || ''} placeholder="Phone No" />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">GSTIN / PAN</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.gstin || selectedCustomer?.pan || ''} />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Rev. Charge</label>
+            <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={isReverseCharge ? 'yes' : 'no'} onChange={e => setIsReverseCharge(e.target.value === 'yes')}>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Ship To</label>
+            <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={shipToSame ? 'same' : 'other'} onChange={e => setShipToSame(e.target.value === 'same')}>
+              <option value="same">Same as Billing Address</option>
+              <option value="other">Other Address</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Place of Supply<span className="text-red-500">*</span></label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.state || ''} placeholder="Place of Supply" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 h-full">
+        <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Invoice Detail</CardTitle>
+        </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Invoice Type</label>
+              <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value)}>
+                <option value="b2b">B2B</option>
+                <option value="b2c">B2C</option>
+                <option value="export">Export</option>
+                <option value="sez">SEZ</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Invoice No.<span className="text-red-500">*</span></label>
+                <div className="flex gap-1">
+                  <Input className="h-9 w-1/3" placeholder="Prefix" value={invoicePrefix} onChange={e => setInvoicePrefix(e.target.value)} />
+                  <Input className="h-9 w-1/3" placeholder="Number" value={invoiceNumberPart} onChange={e => setInvoiceNumberPart(e.target.value)} />
+                  <Input className="h-9 w-1/3" placeholder="Suffix" value={invoiceSuffix} onChange={e => setInvoiceSuffix(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-[60px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Date<span className="text-red-500">*</span></label>
+                <Input type="date" className="h-9 w-full" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Challan No.</label>
+                <Input className="h-9 w-full" placeholder="Challan No." value={challanNo} onChange={e => setChallanNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Challan Date</label>
+                <Input type="date" className="h-9 w-full" value={challanDate} onChange={e => setChallanDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">P.O. No.</label>
+                <Input className="h-9 w-full" placeholder="P.O. No." value={poNo} onChange={e => setPoNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">P.O. Date</label>
+                <Input type="date" className="h-9 w-full" value={poDate} onChange={e => setPoDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">L.R. No.</label>
+                <Input className="h-9 w-full" placeholder="L.R. No." value={lrNo} onChange={e => setLrNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">E-Way No.</label>
+                <Input className="h-9 w-full" placeholder="E-Way No." value={ewayNo} onChange={e => setEwayNo(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Delivery</label>
+              <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={deliveryMode} onChange={e => setDeliveryMode(e.target.value)}>
+                <option value="">Select Delivery Mode</option>
+                <option value="road">Road</option>
+                <option value="rail">Rail</option>
+                <option value="air">Air</option>
+                <option value="ship">Ship</option>
+              </select>
+            </div>
+          </CardContent>
+      </Card>
+      </div>
+
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg overflow-x-auto shadow-sm">
+        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex justify-end relative"><div className="relative">
+              <Button variant="outline" size="sm" className="h-9" onClick={() => setShowColumnSettings(!showColumnSettings)}>Columns</Button>
+              {showColumnSettings && (
+                <div className="absolute right-0 top-10 w-48 bg-white dark:bg-slate-950 rounded-md shadow-lg border border-slate-200 dark:border-slate-800 z-50 p-2 max-h-96 overflow-y-auto">
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 px-1 uppercase">Visible Columns</div>
+                  {Object.keys(visibleColumns).map(col => (
+                    <label key={col} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 dark:border-slate-700"
+                        checked={visibleColumns[col as keyof typeof visibleColumns]}
+                        onChange={() => setVisibleColumns((prev: any) => ({ ...prev, [col]: !prev[col as keyof typeof visibleColumns] }))}
+                      />
+                      <span className="capitalize">{col.replace(/_/g, ' ')}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div></div>
+      <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th className="px-4 py-3">PRODUCT</th>
+              {visibleColumns.sku && <th className="px-4 py-3 text-center">SKU</th>}
+              {visibleColumns.barcode && <th className="px-4 py-3 text-center">BARCODE</th>}
+              {visibleColumns.hsn_code && <th className="px-4 py-3 text-center">HSN</th>}
+              {visibleColumns.batch && <th className="px-4 py-3 text-center">BATCH</th>}
+              {visibleColumns.mfg_date && <th className="px-4 py-3 text-center">MFG DATE</th>}
+              {visibleColumns.exp_date && <th className="px-4 py-3 text-center">EXP DATE</th>}
+              {visibleColumns.size && <th className="px-4 py-3 text-center">SIZE</th>}
+              {visibleColumns.colour && <th className="px-4 py-3 text-center">COLOUR</th>}
+              {visibleColumns.mrp && <th className="px-4 py-3 text-center">MRP</th>}
+              {visibleColumns.w_sale_price && <th className="px-4 py-3 text-center">W.PRICE</th>}
+              {visibleColumns.purchase_price && <th className="px-4 py-3 text-center">P.PRICE</th>}
+              {visibleColumns.unit && <th className="px-4 py-3 text-center">UNIT</th>}
+              {visibleColumns.opening_stock && <th className="px-4 py-3 text-center">STOCK</th>}
+              {visibleColumns.imei1 && <th className="px-4 py-3 text-center">IMEI1</th>}
+              {visibleColumns.imei2 && <th className="px-4 py-3 text-center">IMEI2</th>}
+              {visibleColumns.kitchen && <th className="px-4 py-3 text-center">KITCHEN</th>}
+              {visibleColumns.category_plus && <th className="px-4 py-3 text-center">CATEGORY</th>}
+              {visibleColumns.subcategory_plus && <th className="px-4 py-3 text-center">SUBCATEGORY</th>}
+              {visibleColumns.description && <th className="px-4 py-3 text-center">DESC</th>}
+              {visibleColumns.gst_plus && <th className="px-4 py-3 text-center">GST+</th>}
+              {visibleColumns.sales_unit && <th className="px-4 py-3 text-center">S.UNIT</th>}
+              {visibleColumns.sales_alt_unit && <th className="px-4 py-3 text-center">ALT UNIT</th>}
+              {visibleColumns.conv && <th className="px-4 py-3 text-center">CONV</th>}
+              {visibleColumns.min_stock && <th className="px-4 py-3 text-center">MIN STOCK</th>}
+              {visibleColumns.status && <th className="px-4 py-3 text-center">STATUS</th>}
+              {visibleColumns.s_tax && <th className="px-4 py-3 text-center">S.TAX</th>}
+              {visibleColumns.p_tax && <th className="px-4 py-3 text-center">P.TAX</th>}
+              {visibleColumns.g_down && <th className="px-4 py-3 text-center">G DOWN</th>}
+              {visibleColumns.rack && <th className="px-4 py-3 text-center">RACK</th>}
+              {visibleColumns.def_qty && <th className="px-4 py-3 text-center">DEF QTY</th>}
+              {visibleColumns.part_no && <th className="px-4 py-3 text-center">PART NO</th>}
+              {visibleColumns.cmb_gst && <th className="px-4 py-3 text-center">CMB GST</th>}
+              <th className="px-4 py-3 w-24 text-center">PRICE</th>
+              <th className="px-4 py-3 w-32 text-center">QTY</th>
+              <th className="px-4 py-3 w-40 text-center">DISCOUNT</th>
+              <th className="px-4 py-3 w-24 text-center">GST %</th>
+              <th className="px-4 py-3 w-28 text-center">LINE TOTAL</th>
+              <th className="px-4 py-3 w-12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr><td colSpan={7} className="p-8 text-center text-slate-400">Search and add products above</td></tr>
+            ) : items.map(item => {
+              const line = computeLine(item);
+              return (
+                <tr key={item.key} className="border-b border-slate-100 dark:border-slate-800/50">
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{item.product_name}</td>
+                  {visibleColumns.sku && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.sku || ''} onChange={e => updateItem(item.key, { sku: e.target.value })} /></td>}
+                  {visibleColumns.barcode && <td className="px-4 py-3"><Input className="h-7 w-24 text-xs" value={item.barcode || ''} onChange={e => updateItem(item.key, { barcode: e.target.value })} /></td>}
+                  {visibleColumns.hsn_code && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.hsn_code || ''} onChange={e => updateItem(item.key, { hsn_code: e.target.value })} /></td>}
+                  {visibleColumns.batch && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.batch || ''} onChange={e => updateItem(item.key, { batch: e.target.value })} /></td>}
+                  {visibleColumns.mfg_date && <td className="px-4 py-3"><Input type="date" className="h-7 w-28 text-xs" value={item.mfg_date || ''} onChange={e => updateItem(item.key, { mfg_date: e.target.value })} /></td>}
+                  {visibleColumns.exp_date && <td className="px-4 py-3"><Input type="date" className="h-7 w-28 text-xs" value={item.exp_date || ''} onChange={e => updateItem(item.key, { exp_date: e.target.value })} /></td>}
+                  {visibleColumns.size && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.size || ''} onChange={e => updateItem(item.key, { size: e.target.value })} /></td>}
+                  {visibleColumns.colour && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.colour || ''} onChange={e => updateItem(item.key, { colour: e.target.value })} /></td>}
+                  {visibleColumns.mrp && <td className="px-4 py-3"><Input type="number" className="h-7 w-20 text-xs" value={item.mrp || 0} onChange={e => updateItem(item.key, { mrp: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.w_sale_price && <td className="px-4 py-3"><Input type="number" className="h-7 w-20 text-xs" value={item.w_sale_price || 0} onChange={e => updateItem(item.key, { w_sale_price: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.purchase_price && <td className="px-4 py-3"><Input type="number" className="h-7 w-20 text-xs" value={item.purchase_price || 0} onChange={e => updateItem(item.key, { purchase_price: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.unit && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.unit || ''} onChange={e => updateItem(item.key, { unit: e.target.value })} /></td>}
+                  {visibleColumns.opening_stock && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.opening_stock || 0} onChange={e => updateItem(item.key, { opening_stock: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.imei1 && <td className="px-4 py-3"><Input className="h-7 w-24 text-xs" value={item.imei1 || ''} onChange={e => updateItem(item.key, { imei1: e.target.value })} /></td>}
+                  {visibleColumns.imei2 && <td className="px-4 py-3"><Input className="h-7 w-24 text-xs" value={item.imei2 || ''} onChange={e => updateItem(item.key, { imei2: e.target.value })} /></td>}
+                  {visibleColumns.kitchen && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.kitchen || ''} onChange={e => updateItem(item.key, { kitchen: e.target.value })} /></td>}
+                  {visibleColumns.category_plus && <td className="px-4 py-3"><Input className="h-7 w-24 text-xs" value={item.category_plus || ''} onChange={e => updateItem(item.key, { category_plus: e.target.value })} /></td>}
+                  {visibleColumns.subcategory_plus && <td className="px-4 py-3"><Input className="h-7 w-24 text-xs" value={item.subcategory_plus || ''} onChange={e => updateItem(item.key, { subcategory_plus: e.target.value })} /></td>}
+                  {visibleColumns.description && <td className="px-4 py-3"><Input className="h-7 w-28 text-xs" value={item.description || ''} onChange={e => updateItem(item.key, { description: e.target.value })} /></td>}
+                  {visibleColumns.gst_plus && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.gst_plus || ''} onChange={e => updateItem(item.key, { gst_plus: e.target.value })} /></td>}
+                  {visibleColumns.sales_unit && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.sales_unit || ''} onChange={e => updateItem(item.key, { sales_unit: e.target.value })} /></td>}
+                  {visibleColumns.sales_alt_unit && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.sales_alt_unit || ''} onChange={e => updateItem(item.key, { sales_alt_unit: e.target.value })} /></td>}
+                  {visibleColumns.conv && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.conv || ''} onChange={e => updateItem(item.key, { conv: e.target.value })} /></td>}
+                  {visibleColumns.min_stock && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.min_stock || 0} onChange={e => updateItem(item.key, { min_stock: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.status && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.status || ''} onChange={e => updateItem(item.key, { status: e.target.value })} /></td>}
+                  {visibleColumns.s_tax && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.s_tax || 0} onChange={e => updateItem(item.key, { s_tax: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.p_tax && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.p_tax || 0} onChange={e => updateItem(item.key, { p_tax: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.g_down && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.g_down || ''} onChange={e => updateItem(item.key, { g_down: e.target.value })} /></td>}
+                  {visibleColumns.rack && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.rack || ''} onChange={e => updateItem(item.key, { rack: e.target.value })} /></td>}
+                  {visibleColumns.def_qty && <td className="px-4 py-3"><Input type="number" className="h-7 w-16 text-xs" value={item.def_qty || 0} onChange={e => updateItem(item.key, { def_qty: Number(e.target.value) || 0 })} /></td>}
+                  {visibleColumns.part_no && <td className="px-4 py-3"><Input className="h-7 w-20 text-xs" value={item.part_no || ''} onChange={e => updateItem(item.key, { part_no: e.target.value })} /></td>}
+                  {visibleColumns.cmb_gst && <td className="px-4 py-3"><Input className="h-7 w-16 text-xs" value={item.cmb_gst || ''} onChange={e => updateItem(item.key, { cmb_gst: e.target.value })} /></td>}
+                  <td className="px-4 py-3 text-center">₹{item.selling_price}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateItem(item.key, { quantity: Math.max(1, item.quantity - 1) })}><Minus className="h-3 w-3" /></Button>
+                      <Input type="number" className="h-7 w-14 text-center px-1" value={item.quantity} onChange={e => updateItem(item.key, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateItem(item.key, { quantity: item.quantity + 1 })}><Plus className="h-3 w-3" /></Button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1 justify-center">
+                      <select className="h-7 text-xs border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-950" value={item.discount_type} onChange={e => updateItem(item.key, { discount_type: e.target.value as any, discount_value: 0 })}>
+                        <option value="none">None</option>
+                        <option value="percent">%</option>
+                        <option value="fixed">₹</option>
+                      </select>
+                      {item.discount_type !== 'none' && (
+                        <Input type="number" className="h-7 w-16 text-center px-1" value={item.discount_value} onChange={e => updateItem(item.key, { discount_value: Number(e.target.value) || 0 })} />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center text-slate-500 dark:text-slate-400">{item.est_gst_rate}%</td>
+                  <td className="px-4 py-3 text-center font-semibold text-slate-800 dark:text-slate-200">₹{line.total.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => removeItem(item.key)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      <div className="p-3 border-b border-slate-200 dark:border-slate-800 relative">
+          <div className="flex gap-2 items-start">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                className="pl-10 h-9"
+                placeholder="Search product to add..."
+                value={productSearch}
+                onChange={e => { setProductSearch(e.target.value); setShowProductDropdown(true); }}
+                onFocus={() => setShowProductDropdown(true)}
+              />
+            </div>
+            
+          </div>
+          {showProductDropdown && (
+            <div className="absolute z-10 left-3 right-3 mt-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {filteredProducts.length === 0 ? (
+                <p className="p-3 text-sm text-slate-400">No products found.</p>
+              ) : filteredProducts.map(p => (
+                <div
+                  key={p.id}
+                  className="p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 flex justify-between"
+                  onClick={() => addProductRow(p)}
+                >
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{p.product_name}</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">₹{p.selling_price}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Payment Type</h3>
+          <div className="flex flex-wrap gap-2">
+            {(['credit', 'cash', 'cheque', 'online'] as const).map(pm => (
+              <button
+                key={pm}
+                onClick={() => setPaymentMethod(pm)}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg border-2 uppercase transition-colors ${paymentMethod === pm ? 'border-[#00b884] bg-[#00b884]/10 text-[#00b884]' : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'}`}
+              >
+                {pm}
+              </button>
+            ))}
+          </div>
+          {paymentMethod === 'credit' && (
+            <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+              Credit sale requires the customer to have an assigned credit limit with sufficient available balance.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2 text-sm bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+          <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Taxable Value</span><span className="font-semibold">₹{totals.taxable.toFixed(2)}</span></div>
+          <div className="flex justify-between"><span className="text-slate-600 dark:text-slate-400">Total GST</span><span className="font-semibold">₹{totals.gst.toFixed(2)}</span></div>
+          <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-lg font-bold text-slate-900 dark:text-white">
+            <span>Grand Total</span><span>₹{totals.grand.toFixed(2)}</span>
+          </div>
+          <p className="text-[10px] text-slate-400 italic">Final GST/totals are authoritatively recalculated on save.</p>
+        </div>
+      </div>
+
+      <div className="flex justify-end pb-8">
+        <Button
+          className="h-11 px-8 bg-[#00b884] hover:bg-[#00a375] text-white font-bold"
+          disabled={saving || items.length === 0 || !selectedCustomer}
+          onClick={handleSave}
+        >
+          {saving ? 'Saving...' : 'Save & Print'}
+        </Button>
+      </div>
+    </div>
+  );
+}

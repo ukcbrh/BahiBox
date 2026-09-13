@@ -1,0 +1,57 @@
+with open("src/components/hospitality/HospitalityComponents.tsx", "r") as f:
+    content = f.read()
+
+target = """      .eq('table_id', tableId)
+      .eq('user_id', user.id)
+      .neq('status', 'Cancelled')
+      .gte('created_at', tableData.last_reset_at)
+      .order('created_at', { ascending: true });
+    if (data) setMyOrders(data);
+  };
+
+  useEffect(() => {
+    if (step !== 'menu' && step !== 'success') return;
+    fetchMyOrders();
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const channel = supabase.channel('my_table_orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_order_tickets' }, () => fetchMyOrders())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchMyOrders())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [step, tableId, user]);
+
+  const unpaidTotal = myOrders.filter(o => o.payment_status === 'unpaid').reduce((sum, o) => sum + (o.total || 0), 0);
+
+  const handlePayBill = async () => {
+    if (!user || !tableId) return;
+    setPayingBill(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setPayingBill(false); return; }
+    const { data, error } = await supabase.rpc('pay_table_bill', {
+      p_table_id: tableId,
+      p_user_id: user.id,
+      p_payment_method: billPaymentMethod
+    });
+    if (error) { toast.error(error.message); setPayingBill(false); return; }
+    toast.success(`Bill paid: ₹${data.total}`);
+    setPayingBill(false);
+    fetchMyOrders();
+  };"""
+
+replace = """      .eq('table_id', tableId)
+      .eq('user_id', user.id)
+      .neq('status', 'Cancelled')
+      .gte('created_at', tableData.last_reset_at)
+      .order('created_at', { ascending: true });
+    if (data) setMyOrders(data);
+  };"""
+
+if content.count(target) > 0:
+    # Replace only the first occurrence
+    content = content.replace(target, replace, 1)
+    with open("src/components/hospitality/HospitalityComponents.tsx", "w") as f:
+        f.write(content)
+    print("Replaced successfully")
+else:
+    print("Target not found")

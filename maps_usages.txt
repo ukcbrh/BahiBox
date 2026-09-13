@@ -1,0 +1,21 @@
+src/components/consumer/LiveTrackingMap.tsx:12:  const [directionsService, setDirectionsService] = useState<any>(null);
+src/components/consumer/LiveTrackingMap.tsx:99:          const geocoder = new (window as any).google.maps.Geocoder();
+src/components/consumer/LiveTrackingMap.tsx:132:    const newMap = new (window as any).google.maps.Map(mapRef.current, {
+src/components/consumer/LiveTrackingMap.tsx:140:      const dirService = new (window as any).google.maps.DirectionsService();
+src/components/consumer/LiveTrackingMap.tsx:141:      const dirRenderer = new (window as any).google.maps.DirectionsRenderer({
+src/components/consumer/LiveTrackingMap.tsx:149:      setDirectionsService(dirService);
+src/components/consumer/LiveTrackingMap.tsx:155:    const rMarker = new (window as any).google.maps.Marker({
+src/components/consumer/LiveTrackingMap.tsx:159:        path: (window as any).google.maps.SymbolPath.CIRCLE,
+src/components/consumer/LiveTrackingMap.tsx:173:      const dMarker = new (window as any).google.maps.Marker({
+src/components/consumer/LiveTrackingMap.tsx:177:          path: (window as any).google.maps.SymbolPath.CIRCLE,
+src/components/consumer/LiveTrackingMap.tsx:187:      const bounds = new (window as any).google.maps.LatLngBounds();
+src/components/consumer/MoveView.tsx:189:          const geocoder = new (window as any).google.maps.Geocoder();
+src/components/consumer/MoveView.tsx:210:    return () => { (window as any).google.maps.event.removeListener(listener); };
+src/components/consumer/MoveView.tsx:224:    return () => { (window as any).google.maps.event.removeListener(listener); };
+src/components/consumer/MoveView.tsx:314:                       const geocoder = new (window as any).google.maps.Geocoder();
+src/components/consumer/SavedAddressesView.tsx:173:      const geocoder = new (window as any).google.maps.Geocoder();
+src/pages/RiderApp.tsx:31:  const [directionsService, setDirectionsService] = useState<any>();
+src/pages/RiderApp.tsx:36:    setDirectionsService(new routesLibrary.DirectionsService());
+src/pages/PublicApp.tsx:62:              const geocoder = new (window as any).google.maps.Geocoder();
+src/pages/PublicApp.tsx:1140:                                    const geocoder = new (window as any).google.maps.Geocoder();
+src/pages/PublicApp.tsx:1163:                                        const geocoder = new (window as any).google.maps.Geocoder();

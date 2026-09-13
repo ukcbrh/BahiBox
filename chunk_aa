@@ -1,0 +1,263 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Plus, Edit2, ArrowLeft, Trash2, Search, CheckCircle2, Minus } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getSupabaseClient } from '../../lib/supabase';
+import { toast } from 'sonner';
+import { printBillForChannel, BillData } from '../../lib/billRenderer';
+import { tenantScopedKey } from '@/src/lib/tenantStorage';
+
+interface CreateSaleInvoiceProps {
+  onBack: () => void;
+}
+
+interface ItemRow {
+  key: string;
+  product_id: string;
+  product_name: string;
+  hsn_sac_id: string | null;
+  selling_price: number;
+  quantity: number;
+  discount_type: 'none' | 'percent' | 'fixed';
+  discount_value: number;
+  est_gst_rate: number;
+  sku?: string;
+  barcode?: string;
+  batch?: string;
+  mfg_date?: string;
+  exp_date?: string;
+  size?: string;
+  colour?: string;
+  mrp?: number;
+  w_sale_price?: number;
+  imei1?: string;
+  imei2?: string;
+  kitchen?: string;
+  category_plus?: string;
+  subcategory_plus?: string;
+  description?: string;
+  gst_plus?: string;
+  sales_unit?: string;
+  sales_alt_unit?: string;
+  conv?: string;
+  min_stock?: number;
+  status?: string;
+  s_tax?: number;
+  p_tax?: number;
+  g_down?: string;
+  rack?: string;
+  def_qty?: number;
+  part_no?: string;
+  hsn_code?: string;
+  cmb_gst?: string;
+  purchase_price?: number;
+  opening_stock?: number;
+  unit?: string;
+}
+
+export function CreateSaleInvoice({ onBack }: CreateSaleInvoiceProps) {
+  const { user, currentTenantId, activeBranchId } = useAuth();
+  const supabase = getSupabaseClient();
+
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [invoicePrefix, setInvoicePrefix] = useState('');
+  const [invoiceNumberPart, setInvoiceNumberPart] = useState('');
+  const [invoiceSuffix, setInvoiceSuffix] = useState('');
+  const [invoiceType, setInvoiceType] = useState('b2b');
+  const [challanNo, setChallanNo] = useState('');
+  const [challanDate, setChallanDate] = useState('');
+  const [poNo, setPoNo] = useState('');
+  const [poDate, setPoDate] = useState('');
+  const [lrNo, setLrNo] = useState('');
+  const [ewayNo, setEwayNo] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState('');
+  const [isReverseCharge, setIsReverseCharge] = useState(false);
+  const [shipToSame, setShipToSame] = useState(true);
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    const saved = localStorage.getItem(tenantScopedKey('sale_invoice_columns', currentTenantId));
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      sku: true, purchase_price: false, unit: true, opening_stock: false, barcode: true, mrp: true,
+      w_sale_price: false, batch: true, mfg_date: true, exp_date: true, size: false, colour: false,
+      imei1: false, imei2: false, kitchen: false, category_plus: true, subcategory_plus: true, description: false,
+      gst_plus: false, sales_unit: false, sales_alt_unit: false,
+      conv: false, min_stock: false, status: false, s_tax: false, p_tax: false, g_down: false, rack: false,
+      def_qty: false, part_no: false, hsn_code: false, cmb_gst: true
+    };
+  });
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+  useEffect(() => {
+    localStorage.setItem(tenantScopedKey('sale_invoice_columns', currentTenantId), JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+  const invoiceNo = `${invoicePrefix}${invoiceNumberPart}${invoiceSuffix}`;
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  useEffect(() => {
+    const generateDefaultInvoiceNo = async () => {
+      if (!currentTenantId) return;
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+      const { data: tenantData } = await supabase.from('tenants').select('invoice_prefix').eq('id', currentTenantId).single();
+      const prefix = tenantData?.invoice_prefix || 'INV-';
+      const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      const randomPart = Math.floor(100000 + Math.random() * 900000);
+      setInvoicePrefix(prefix);
+      setInvoiceNumberPart(`${datePart}-${randomPart}`);
+      setInvoiceSuffix('');
+    };
+    generateDefaultInvoiceNo();
+  }, [currentTenantId]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [advanceToApply, setAdvanceToApply] = useState('');
+
+  const [products, setProducts] = useState<any[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+
+  const [items, setItems] = useState<ItemRow[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'credit' | 'cash' | 'cheque' | 'online'>('cash');
+  const [saving, setSaving] = useState(false);
+  const [successInvoice, setSuccessInvoice] = useState<any>(null);
+
+  useEffect(() => {
+    if (!supabase || !currentTenantId) return;
+    const fetchData = async () => {
+      const { data: custData } = await supabase.rpc('get_customers_with_balance', { p_tenant_id: currentTenantId });
+      if (custData) setCustomers(custData);
+
+      const { data: prodData } = await supabase.from('products').select('*').eq('tenant_id', currentTenantId).eq('is_active', true);
+      if (prodData) setProducts(prodData);
+    };
+    fetchData();
+  }, [supabase, currentTenantId]);
+
+  const filteredCustomers = customers.filter(c =>
+    c.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.phone?.includes(customerSearch)
+  );
+
+  const filteredProducts = products.filter(p =>
+    p.product_name?.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (p.barcode && p.barcode.includes(productSearch))
+  );
+
+  const addProductRow = (product: any) => {
+    const estRate = product.cgst != null || product.sgst != null
+      ? (Number(product.cgst || 0) + Number(product.sgst || 0))
+      : (product.igst != null ? Number(product.igst) : 0);
+    setItems(prev => [...prev, {
+      key: `${product.id}-${Date.now()}`,
+      product_id: product.id,
+      product_name: product.product_name,
+      hsn_sac_id: product.hsn_sac_id,
+      selling_price: Number(product.selling_price) || 0,
+      quantity: 1,
+      discount_type: 'none',
+      discount_value: 0,
+      est_gst_rate: estRate,
+      sku: product.sku || '',
+      barcode: product.barcode || '',
+      batch: product.batch || '',
+      mfg_date: product.mfg_date || '',
+      exp_date: product.exp_date || '',
+      size: product.size || '',
+      colour: product.colour || '',
+      mrp: product.mrp || 0,
+      w_sale_price: product.w_sale_price || 0,
+      imei1: product.imei1 || '',
+      imei2: product.imei2 || '',
+      kitchen: product.kitchen || '',
+      category_plus: product.category_plus || '',
+      subcategory_plus: product.subcategory_plus || '',
+      description: product.description || '',
+      gst_plus: product.gst_plus || '',
+      sales_unit: product.sales_unit || '',
+      sales_alt_unit: product.sales_alt_unit || '',
+      conv: product.conv || '',
+      min_stock: product.min_stock || 0,
+      status: product.status || '',
+      s_tax: product.s_tax || 0,
+      p_tax: product.p_tax || 0,
+      g_down: product.g_down || '',
+      rack: product.rack || '',
+      def_qty: product.def_qty || 0,
+      part_no: product.part_no || '',
+      hsn_code: product.hsn_code || '',
+      cmb_gst: product.cmb_gst || '',
+      purchase_price: product.purchase_price || 0,
+      opening_stock: product.opening_stock || 0,
+      unit: product.unit || ''
+    }]);
+    setProductSearch('');
+    setShowProductDropdown(false);
+  };
+
+  const updateItem = (key: string, patch: Partial<ItemRow>) => {
+    setItems(prev => prev.map(it => it.key === key ? { ...it, ...patch } : it));
+  };
+
+  const removeItem = (key: string) => {
+    setItems(prev => prev.filter(it => it.key !== key));
+  };
+
+  const computeLine = (item: ItemRow) => {
+    const gross = item.selling_price * item.quantity;
+    const discount = item.discount_type === 'percent'
+      ? Math.round((gross * item.discount_value / 100) * 100) / 100
+      : item.discount_type === 'fixed' ? item.discount_value : 0;
+    const taxable = gross - discount;
+    const gstAmount = Math.round((taxable * item.est_gst_rate / 100) * 100) / 100;
+    return { gross, discount, taxable, gstAmount, total: taxable + gstAmount };
+  };
+
+  const totals = items.reduce((acc, item) => {
+    const l = computeLine(item);
+    acc.taxable += l.taxable;
+    acc.gst += l.gstAmount;
+    acc.grand += l.total;
+    return acc;
+  }, { taxable: 0, gst: 0, grand: 0 });
+
+  const handleSave = async () => {
+    if (!selectedCustomer) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (items.length === 0) {
+      toast.error('Please add at least one product');
+      return;
+    }
+    if (!supabase || !currentTenantId || !user) return;
+
+    setSaving(true);
+    try {
+      const branchId = activeBranchId;
+      if (!branchId) throw new Error('No active branch selected. Please select a branch from Switch Business.');
+
+      const { data, error } = await supabase.rpc('create_sales_invoice', {
+        p_tenant_id: currentTenantId,
+        p_branch_id: branchId,
+        p_created_by: user.id,
+        p_customer_id: selectedCustomer.id,
+        p_items: items.map(it => ({
+          product_id: it.product_id,
+          quantity: it.quantity,
+          discount_type: it.discount_type === 'none' ? 'fixed' : it.discount_type,
+          discount_value: it.discount_type === 'none' ? 0 : it.discount_value
+        })),
+        p_payment_method: paymentMethod
+      });
+
+      if (error) throw error;
+      const updatePayload: any = {};
+      if (invoiceNo && invoiceNo.trim() !== '') updatePayload.invoice_number = invoiceNo.trim();
+      if (invoiceDate) updatePayload.invoice_date = invoiceDate;
+      updatePayload.invoice_type = invoiceType;
+      updatePayload.is_reverse_charge = isReverseCharge;
+      if (challanNo) updatePayload.challan_no = challanNo;
+ 

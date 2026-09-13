@@ -1,0 +1,238 @@
+
+
+export const InwardPaymentPage = () => {
+  const { currentTenantId, user } = useAuth();
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [unpaidInvoices, setUnpaidInvoices] = useState<any[]>([]);
+  const [outstandingBalance, setOutstandingBalance] = useState(0);
+  const [applyMode, setApplyMode] = useState<'on_account' | 'specific_invoice'>('on_account');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [upiRef, setUpiRef] = useState('');
+  const [referenceNote, setReferenceNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  const fetchCustomers = async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) return;
+    const { data } = await supabase.from('retail_customers').select('*').eq('tenant_id', currentTenantId).order('customer_name');
+    setCustomers(data || []);
+  };
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) { setLoadingHistory(false); return; }
+    const { data } = await supabase.from('customer_payments').select('*, retail_customers(customer_name)').eq('tenant_id', currentTenantId).order('created_at', { ascending: false }).limit(50);
+    setPaymentHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => { fetchCustomers(); fetchHistory(); }, [currentTenantId]);
+
+  const handleSelectCustomer = async (cust: any) => {
+    setSelectedCustomer(cust);
+    setCustomerSearch('');
+    setSelectedInvoiceId('');
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) return;
+
+    const { data: invoices } = await supabase.from('sales_invoices').select('id, invoice_number, invoice_date, total_amount').eq('tenant_id', currentTenantId).eq('customer_id', cust.id).neq('status', 'cancelled');
+    const { data: payments } = await supabase.from('customer_payments').select('sales_invoice_id, amount').eq('tenant_id', currentTenantId).eq('customer_id', cust.id);
+
+    const paidByInvoice: Record<string, number> = {};
+    let totalPaid = 0;
+    (payments || []).forEach((p: any) => {
+      totalPaid += p.amount;
+      if (p.sales_invoice_id) paidByInvoice[p.sales_invoice_id] = (paidByInvoice[p.sales_invoice_id] || 0) + p.amount;
+    });
+
+    const withBalance = (invoices || []).map((inv: any) => ({
+      ...inv,
+      paid: paidByInvoice[inv.id] || 0,
+      balance: inv.total_amount - (paidByInvoice[inv.id] || 0)
+    })).filter((inv: any) => inv.balance > 0.01);
+    setUnpaidInvoices(withBalance);
+
+    const totalInvoiced = (invoices || []).reduce((s: number, inv: any) => s + inv.total_amount, 0);
+    const opening = cust.balance_type === 'to_receive' ? (cust.opening_balance || 0) : -(cust.opening_balance || 0);
+    setOutstandingBalance(opening + totalInvoiced - totalPaid);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedCustomer || !amount || parseFloat(amount) <= 0 || !currentTenantId || !user) return;
+    setSaving(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setSaving(false); return; }
+
+    let note = referenceNote;
+    if (paymentMethod === 'cheque') note = ('Cheque #' + chequeNumber + ', ' + bankName + '. ' + referenceNote).trim();
+    if (paymentMethod === 'upi') note = ('UPI Ref: ' + upiRef + '. ' + referenceNote).trim();
+
+    const { error } = await supabase.rpc('record_customer_payment', {
+      p_tenant_id: currentTenantId,
+      p_customer_id: selectedCustomer.id,
+      p_sales_invoice_id: applyMode === 'specific_invoice' ? selectedInvoiceId || null : null,
+      p_amount: parseFloat(amount),
+      p_payment_method: paymentMethod,
+      p_payment_date: paymentDate,
+      p_reference_note: note || null,
+      p_created_by: user.id
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Payment recorded successfully');
+    setSelectedCustomer(null);
+    setAmount('');
+    setSelectedInvoiceId('');
+    setChequeNumber(''); setBankName(''); setUpiRef(''); setReferenceNote('');
+    fetchHistory();
+  };
+
+  const filteredCustomers = customers.filter((c: any) => c.customer_name?.toLowerCase().includes(customerSearch.toLowerCase()));
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Inward Payment</h2>
+        <p className="text-slate-500 dark:text-slate-400">Record payments received from customers.</p>
+      </div>
+
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          {!selectedCustomer ? (
+            <div>
+              <label className="text-sm font-medium">Customer</label>
+              <Input placeholder="Search customer by name..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} />
+              {customerSearch && (
+                <div className="mt-2 border border-slate-200 dark:border-slate-800 rounded-lg max-h-48 overflow-y-auto">
+                  {filteredCustomers.length === 0 ? (
+                    <p className="text-sm text-slate-400 p-3">No customers found.</p>
+                  ) : filteredCustomers.map((c: any) => (
+                    <button key={c.id} onClick={() => handleSelectCustomer(c)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-900 text-sm border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      {c.customer_name}{c.phone ? ' · ' + c.phone : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900 rounded-xl p-4">
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{selectedCustomer.customer_name}</p>
+                  <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Outstanding Balance</p>
+                  <p className={"text-xl font-extrabold " + (outstandingBalance > 0 ? 'text-red-600' : 'text-emerald-600')}>₹{Math.abs(outstandingBalance).toLocaleString('en-IN')}</p>
+                </div>
+                <button onClick={() => setSelectedCustomer(null)} className="text-xs text-primary font-semibold ml-4">Change</button>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Apply Payment To</label>
+                <div className="flex gap-2 mt-1">
+                  <button onClick={() => setApplyMode('on_account')} className={"flex-1 py-2 rounded-xl text-sm font-semibold border-2 " + (applyMode === 'on_account' ? 'border-primary text-primary' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>On Account (Advance)</button>
+                  <button onClick={() => setApplyMode('specific_invoice')} className={"flex-1 py-2 rounded-xl text-sm font-semibold border-2 " + (applyMode === 'specific_invoice' ? 'border-primary text-primary' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>Specific Invoice</button>
+                </div>
+              </div>
+
+              {applyMode === 'specific_invoice' && (
+                <div>
+                  <label className="text-sm font-medium">Select Invoice</label>
+                  <select value={selectedInvoiceId} onChange={(e) => { setSelectedInvoiceId(e.target.value); const inv = unpaidInvoices.find((i: any) => i.id === e.target.value); if (inv) setAmount(inv.balance.toString()); }} className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm">
+                    <option value="">Select an unpaid invoice</option>
+                    {unpaidInvoices.map((inv: any) => (
+                      <option key={inv.id} value={inv.id}>{inv.invoice_number} — Balance: ₹{inv.balance.toFixed(2)}</option>
+                    ))}
+                  </select>
+                  {unpaidInvoices.length === 0 && <p className="text-xs text-slate-400 mt-1">No unpaid invoices for this customer.</p>}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Amount (₹)</label>
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Payment Date</label>
+                  <Input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Payment Method</label>
+                <div className="grid grid-cols-4 gap-2 mt-1">
+                  {['cash', 'bank', 'upi', 'cheque'].map((m) => (
+                    <button key={m} onClick={() => setPaymentMethod(m)} className={"py-2 rounded-lg text-xs font-bold uppercase border-2 " + (paymentMethod === m ? 'border-primary text-primary' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>{m}</button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMethod === 'cheque' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Input placeholder="Cheque Number" value={chequeNumber} onChange={(e) => setChequeNumber(e.target.value)} />
+                  <Input placeholder="Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </div>
+              )}
+              {paymentMethod === 'upi' && (
+                <Input placeholder="UPI Reference / Transaction ID" value={upiRef} onChange={(e) => setUpiRef(e.target.value)} />
+              )}
+
+              <div>
+                <label className="text-sm font-medium">Reference Note (optional)</label>
+                <Input value={referenceNote} onChange={(e) => setReferenceNote(e.target.value)} />
+              </div>
+
+              <Button className="w-full h-12" onClick={handleSubmit} disabled={saving || !amount || parseFloat(amount) <= 0}>
+                {saving ? 'Recording...' : 'Record Payment · ₹' + (amount || 0)}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-4">Recent Payments</h3>
+          {loadingHistory ? (
+            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+          ) : paymentHistory.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No payments recorded yet.</p>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Date</th>
+                  <th className="px-3 py-2 font-semibold">Customer</th>
+                  <th className="px-3 py-2 font-semibold">Method</th>
+                  <th className="px-3 py-2 font-semibold text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {paymentHistory.map((p: any) => (
+                  <tr key={p.id}>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{p.payment_date}</td>
+                    <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{p.retail_customers?.customer_name}</td>
+                    <td className="px-3 py-2 text-slate-500 capitalize">{p.payment_method}</td>
+                    <td className="px-3 py-2 text-right font-bold text-emerald-600">₹{p.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

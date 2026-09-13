@@ -1,0 +1,86 @@
+450:  useEffect(() => {
+451:    const initData = async () => {
+452:      const supabase = getSupabaseClient();
+453:      if (!supabase) return;
+454:      
+455:      const { data: modsData } = await supabase.from('modules_master').select('name');
+456:      if (modsData && modsData.length > 0) {
+457:         setAvailableModules(modsData.map((m: any) => m.name));
+458:      }
+459:
+460:      // Fetch plans from DB
+461:      const { data: plansData, error: plansErr } = await supabase.from('subscription_plans').select('*');
+462:      if (plansData && plansData.length > 0) {
+463:        setPlans(plansData.map((p: any) => ({
+464:          id: p.id,
+465:          moduleName: p.module_name,
+466:          tier: p.tier,
+467:          name: p.name,
+468:          priceMonthly: p.price_monthly,
+469:          priceYearly: p.price_yearly,
+470:          commission: p.commission,
+471:          features: p.features || [],
+472:          isActive: p.is_active,
+473:          whiteLabel: p.white_label
+474:        })));
+475:      } else {
+476:        // Fallback to local defaults if DB is empty, but push to DB so they exist
+477:        setPlans(currentPlans => {
+478:          const pushDefaults = async () => {
+479:            for (const p of currentPlans) {
+480:              await supabase.from('subscription_plans').upsert({
+481:                id: p.id,
+482:                module_name: p.moduleName,
+483:                tier: p.tier,
+484:                name: p.name,
+485:                price_monthly: p.priceMonthly,
+486:                price_yearly: p.priceYearly,
+487:                commission: p.commission,
+488:                features: p.features,
+489:                is_active: p.isActive,
+490:                white_label: p.whiteLabel
+491:              }, { onConflict: 'id' });
+492:            }
+493:          };
+494:          pushDefaults();
+495:          return currentPlans;
+496:        });
+497:      }
+498:
+499:      // Fetch coupons from DB
+500:      const { data: couponsData } = await supabase.from('promo_codes').select('*');
+501:      if (couponsData && couponsData.length > 0) {
+502:        setCoupons(couponsData.map((c: any) => ({
+503:          id: c.id,
+504:          code: c.code,
+505:          discountType: c.discount_type || (c.discount_percentage ? 'percentage' : 'fixed'),
+506:          discountValue: c.discount_value || c.discount_percentage || c.fixed_discount || 0,
+507:          applicableModule: c.applicable_module || 'All',
+508:          applicablePlan: c.applicable_plan || 'All',
+509:          isActive: c.is_active
+510:        })));
+511:      } else {
+512:        setCoupons(currentCoupons => {
+513:          const pushDefaults = async () => {
+514:            for (const c of currentCoupons) {
+515:              await supabase.from('promo_codes').upsert({
+516:                id: c.id,
+517:                code: c.code,
+518:                discount_type: c.discountType,
+519:                discount_value: c.discountValue,
+520:                applicable_module: c.applicableModule,
+521:                applicable_plan: c.applicablePlan,
+522:                is_active: c.isActive
+523:              }, { onConflict: 'id' });
+524:            }
+525:          };
+526:          pushDefaults();
+527:          return currentCoupons;
+528:        });
+529:      }
+530:    };
+531:    
+532:    initData();
+533:  }, []);
+534:
+535:  const saveAllPlans = async (newPlans?: Plan[]) => {

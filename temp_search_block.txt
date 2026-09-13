@@ -1,0 +1,24 @@
+        {branchConfig?.is_scan_and_go_active && (
+          <button 
+            onClick={() => setActiveTab('scan_go')}
+            className={`relative min-w-fit flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-colors ${activeTab === 'scan_go' ? 'bg-slate-900 dark:bg-slate-100 dark:bg-slate-800 text-white dark:text-slate-900 dark:text-slate-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:bg-slate-700'}`}
+          >
+            <div className="flex items-center"> 
+              <Smartphone size={18} />
+            </div>
+            Scan & Go
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+          </button>
+        )}
+        {branchConfig?.is_online_store_active && (
+          <button 
+            onClick={() => setActiveTab('online')}
+            className={`relative min-w-fit flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-sm transition-colors ${activeTab === 'online' ? 'bg-slate-900 dark:bg-slate-100 dark:bg-slate-800 text-white dark:text-slate-900 dark:text-slate-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:bg-slate-700'}`}
+          >
+            <div className="flex items-center gap-1">
+              <Package size={18} />
+            </div>
+            Online Orders
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+          </button>
+        )}

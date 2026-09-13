@@ -1,0 +1,53 @@
+                              <SelectTrigger className="h-8 text-sm font-medium bg-slate-50 dark:bg-slate-900 border-0 focus:ring-0 text-slate-600 dark:text-slate-400">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Month">Month</SelectItem>
+                                <SelectItem value="One Year">One Year</SelectItem>
+                                <SelectItem value="Two Years">Two Years</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-1 flex flex-col pt-8">
+                        <ul className="space-y-4 flex-1 mb-8">
+                          {plan.features?.map((feature: string, i: number) => (
+                            <li key={i} className="flex items-start">
+                              <Check className={`h-5 w-5 ${isPopular ? 'text-primary' : 'text-emerald-500'} mr-3 shrink-0`} />
+                              <span className={isPopular ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-600 dark:text-slate-400'}>{feature}</span>
+                            </li>
+                          ))}
+                          {(!plan.features || plan.features.length === 0) && (
+                             <li className="text-slate-400 italic text-sm">No features listed</li>
+                          )}
+                        </ul>
+                        {isCurrentPlan ? (
+                          <div className="w-full h-12 flex items-center justify-center gap-2 bg-green-100 text-green-700 font-bold rounded-md">
+                            <CheckCircle2 size={20} /> Current Plan
+                          </div>
+                        ) : (
+                          <Button 
+                            variant={isPopular ? 'default' : (idx === 0 ? 'outline' : 'secondary')}
+                            className={`w-full h-12 text-lg ${isPopular ? 'shadow-md hover:shadow-lg transition-all' : (idx === 0 ? 'border-2 hover:bg-slate-50 dark:hover:bg-slate-900' : 'hover:bg-slate-200 dark:bg-slate-700')}`} 
+                            onClick={() => handleSelectPlan(plan.name, cycle)} 
+                          >
+                            Select {plan.name}
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center text-slate-500 dark:text-slate-400 mt-12 py-12 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg max-w-2xl mx-auto">
+                No active plans currently available for this module.
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}

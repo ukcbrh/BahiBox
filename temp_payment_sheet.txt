@@ -1,0 +1,176 @@
+
+
+export const PaymentBottomSheet = ({
+  isOpen,
+  onClose,
+  amount,
+  tenantId,
+  branchId,
+  referenceType,
+  referenceId,
+  purpose,
+  onSuccess
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  amount: number;
+  tenantId: string;
+  branchId?: string | null;
+  referenceType: string;
+  referenceId: string;
+  purpose?: string;
+  onSuccess: (paymentMethod: string) => void;
+}) => {
+  const { user } = useAuth();
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    const fetchWallet = async () => {
+      setLoadingWallet(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) { setLoadingWallet(false); return; }
+      const { data } = await supabase.from('wallet_accounts').select('current_balance').eq('user_id', user.id).eq('account_type', 'consumer').maybeSingle();
+      setWalletBalance(data?.current_balance ?? 0);
+      setLoadingWallet(false);
+    };
+    fetchWallet();
+  }, [isOpen, user]);
+
+  const handleCash = () => {
+    onSuccess('cash');
+    onClose();
+  };
+
+  const openRazorpayFor = async (payAmount: number, onRazorpaySuccess: () => void) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { toast.error('Please login to continue'); return; }
+
+    const response = await fetch('/api/create-order-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({
+        amount: payAmount,
+        tenant_id: tenantId,
+        branch_id: branchId || null,
+        reference_type: referenceType,
+        reference_id: referenceId,
+        purpose: purpose || 'consumer_order'
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to create payment order');
+    }
+    const orderData = await response.json();
+
+    const isLoaded = await loadRazorpayScript();
+    if (!isLoaded) { throw new Error('Failed to load payment gateway'); }
+
+    return new Promise<void>((resolve, reject) => {
+      const options = {
+        key: orderData.razorpay_key_id,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'BahiBox',
+        description: 'Order Payment',
+        order_id: orderData.razorpay_order_id,
+        handler: function () {
+          onRazorpaySuccess();
+          resolve();
+        },
+        prefill: { email: user?.email || '' },
+        theme: { color: '#22C55E' },
+        modal: { ondismiss: () => reject(new Error('Payment cancelled')) }
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        reject(new Error(response.error?.description || 'Payment failed'));
+      });
+      rzp.open();
+    });
+  };
+
+  const handleWallet = async () => {
+    if (walletBalance === null) return;
+    setProcessing('wallet');
+    try {
+      if (walletBalance >= amount) {
+        onSuccess('wallet');
+        onClose();
+      } else {
+        const remaining = amount - walletBalance;
+        toast('Paying ₹' + walletBalance.toFixed(2) + ' from Wallet, ₹' + remaining.toFixed(2) + ' via online payment');
+        await openRazorpayFor(remaining, () => {
+          onSuccess('wallet_plus_online');
+        });
+        onClose();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Payment failed');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleOnline = async () => {
+    setProcessing('online');
+    try {
+      await openRazorpayFor(amount, () => {
+        onSuccess('online');
+      });
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || 'Payment failed');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-950 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Choose Payment Method</h3>
+          <button onClick={onClose} className="text-slate-400"><X size={20} /></button>
+        </div>
+        <p className="text-2xl font-extrabold text-primary">₹{amount.toFixed(2)}</p>
+
+        <div className="space-y-3">
+          <button onClick={handleCash} disabled={!!processing} className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-primary transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">💵</div>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">Cash</span>
+            </div>
+          </button>
+
+          <button onClick={handleWallet} disabled={!!processing || loadingWallet} className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-primary transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">🪙</div>
+              <div className="text-left">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">BahiBox Coin</p>
+                <p className="text-xs text-slate-400">{loadingWallet ? 'Loading...' : 'Balance: ₹' + (walletBalance ?? 0).toFixed(2)}</p>
+              </div>
+            </div>
+            {processing === 'wallet' && <span className="text-xs text-primary">Processing...</span>}
+          </button>
+
+          <button onClick={handleOnline} disabled={!!processing} className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-primary transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">💳</div>
+              <span className="font-semibold text-slate-900 dark:text-slate-100">Pay Online</span>
+            </div>
+            {processing === 'online' && <span className="text-xs text-primary">Processing...</span>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

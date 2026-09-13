@@ -1,0 +1,150 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/App.tsx");import __vite__cjsImport0_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=708c1e1d"; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import { BrowserRouter, Routes, Route } from "/node_modules/.vite/deps/react-router-dom.js?v=708c1e1d";
+import { Toaster } from "/node_modules/.vite/deps/sonner.js?v=708c1e1d";
+import Landing from "/src/pages/Landing.tsx";
+import Login from "/src/pages/Login.tsx";
+import MerchantDashboard from "/src/pages/MerchantDashboard.tsx";
+import PublicApp from "/src/pages/PublicApp.tsx";
+import Pricing from "/src/pages/Pricing.tsx";
+import Checkout from "/src/pages/Checkout.tsx";
+import SuperAdmin from "/src/pages/SuperAdmin.tsx";
+import ScanAndGo from "/src/pages/ScanAndGo.tsx";
+import { AuthProvider } from "/src/contexts/AuthContext.tsx";
+import { TenantProvider } from "/src/contexts/TenantContext.tsx";
+import { PWAInstallPrompt } from "/src/components/PWAInstallPrompt.tsx";
+export default function App() {
+  return /* @__PURE__ */ jsxDEV(TenantProvider, { children: /* @__PURE__ */ jsxDEV(AuthProvider, { children: /* @__PURE__ */ jsxDEV(BrowserRouter, { children: [
+    /* @__PURE__ */ jsxDEV(Toaster, { position: "top-center" }, void 0, false, {
+      fileName: "/app/applet/src/App.tsx",
+      lineNumber: 26,
+      columnNumber: 11
+    }, this),
+    /* @__PURE__ */ jsxDEV(Routes, { children: [
+      /* @__PURE__ */ jsxDEV(Route, { path: "/", element: /* @__PURE__ */ jsxDEV(Landing, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 28,
+        columnNumber: 38
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 28,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/pricing", element: /* @__PURE__ */ jsxDEV(Pricing, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 29,
+        columnNumber: 45
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 29,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/checkout", element: /* @__PURE__ */ jsxDEV(Checkout, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 30,
+        columnNumber: 46
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 30,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/login", element: /* @__PURE__ */ jsxDEV(Login, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 31,
+        columnNumber: 43
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 31,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/merchant-dashboard", element: /* @__PURE__ */ jsxDEV(MerchantDashboard, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 32,
+        columnNumber: 56
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 32,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/public", element: /* @__PURE__ */ jsxDEV(PublicApp, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 33,
+        columnNumber: 44
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 33,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/superadmin", element: /* @__PURE__ */ jsxDEV(SuperAdmin, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 34,
+        columnNumber: 48
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 34,
+        columnNumber: 13
+      }, this),
+      /* @__PURE__ */ jsxDEV(Route, { path: "/scan", element: /* @__PURE__ */ jsxDEV(ScanAndGo, {}, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 35,
+        columnNumber: 42
+      }, this) }, void 0, false, {
+        fileName: "/app/applet/src/App.tsx",
+        lineNumber: 35,
+        columnNumber: 13
+      }, this)
+    ] }, void 0, true, {
+      fileName: "/app/applet/src/App.tsx",
+      lineNumber: 27,
+      columnNumber: 11
+    }, this),
+    /* @__PURE__ */ jsxDEV(PWAInstallPrompt, {}, void 0, false, {
+      fileName: "/app/applet/src/App.tsx",
+      lineNumber: 37,
+      columnNumber: 11
+    }, this)
+  ] }, void 0, true, {
+    fileName: "/app/applet/src/App.tsx",
+    lineNumber: 25,
+    columnNumber: 9
+  }, this) }, void 0, false, {
+    fileName: "/app/applet/src/App.tsx",
+    lineNumber: 24,
+    columnNumber: 7
+  }, this) }, void 0, false, {
+    fileName: "/app/applet/src/App.tsx",
+    lineNumber: 23,
+    columnNumber: 5
+  }, this);
+}
+_c = App;
+var _c;
+$RefreshReg$(_c, "App");
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("/app/applet/src/App.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("/app/applet/src/App.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+function $RefreshReg$(type, id) {
+  return RefreshRuntime.register(type, "/app/applet/src/App.tsx " + id);
+}
+function $RefreshSig$() {
+  return RefreshRuntime.createSignatureFunctionForTransform();
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJtYXBwaW5ncyI6IkFBeUJVO0FBekJWO0FBQUE7QUFBQTtBQUFBO0FBTUEsU0FBU0EsZUFBZUMsUUFBUUMsYUFBYTtBQUM3QyxTQUFTQyxlQUFlO0FBQ3hCLE9BQU9DLGFBQWE7QUFDcEIsT0FBT0MsV0FBVztBQUNsQixPQUFPQyx1QkFBdUI7QUFDOUIsT0FBT0MsZUFBZTtBQUN0QixPQUFPQyxhQUFhO0FBQ3BCLE9BQU9DLGNBQWM7QUFDckIsT0FBT0MsZ0JBQWdCO0FBQ3ZCLE9BQU9DLGVBQWU7QUFDdEIsU0FBU0Msb0JBQW9CO0FBQzdCLFNBQVNDLHNCQUFzQjtBQUMvQixTQUFTQyx3QkFBd0I7QUFFakMsd0JBQXdCQyxNQUFNO0FBQzVCLFNBQ0UsdUJBQUMsa0JBQ0MsaUNBQUMsZ0JBQ0MsaUNBQUMsaUJBQ0M7QUFBQSwyQkFBQyxXQUFRLFVBQVMsZ0JBQWxCO0FBQUE7QUFBQTtBQUFBO0FBQUEsV0FBOEI7QUFBQSxJQUM5Qix1QkFBQyxVQUNDO0FBQUEsNkJBQUMsU0FBTSxNQUFLLEtBQUksU0FBUyx1QkFBQyxhQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBUSxLQUFqQztBQUFBO0FBQUE7QUFBQTtBQUFBLGFBQXFDO0FBQUEsTUFDckMsdUJBQUMsU0FBTSxNQUFLLFlBQVcsU0FBUyx1QkFBQyxhQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBUSxLQUF4QztBQUFBO0FBQUE7QUFBQTtBQUFBLGFBQTRDO0FBQUEsTUFDNUMsdUJBQUMsU0FBTSxNQUFLLGFBQVksU0FBUyx1QkFBQyxjQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBUyxLQUExQztBQUFBO0FBQUE7QUFBQTtBQUFBLGFBQThDO0FBQUEsTUFDOUMsdUJBQUMsU0FBTSxNQUFLLFVBQVMsU0FBUyx1QkFBQyxXQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBTSxLQUFwQztBQUFBO0FBQUE7QUFBQTtBQUFBLGFBQXdDO0FBQUEsTUFDeEMsdUJBQUMsU0FBTSxNQUFLLHVCQUFzQixTQUFTLHVCQUFDLHVCQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBa0IsS0FBN0Q7QUFBQTtBQUFBO0FBQUE7QUFBQSxhQUFpRTtBQUFBLE1BQ2pFLHVCQUFDLFNBQU0sTUFBSyxXQUFVLFNBQVMsdUJBQUMsZUFBRDtBQUFBO0FBQUE7QUFBQTtBQUFBLGFBQVUsS0FBekM7QUFBQTtBQUFBO0FBQUE7QUFBQSxhQUE2QztBQUFBLE1BQzdDLHVCQUFDLFNBQU0sTUFBSyxlQUFjLFNBQVMsdUJBQUMsZ0JBQUQ7QUFBQTtBQUFBO0FBQUE7QUFBQSxhQUFXLEtBQTlDO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBa0Q7QUFBQSxNQUNsRCx1QkFBQyxTQUFNLE1BQUssU0FBUSxTQUFTLHVCQUFDLGVBQUQ7QUFBQTtBQUFBO0FBQUE7QUFBQSxhQUFVLEtBQXZDO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFBMkM7QUFBQSxTQVI3QztBQUFBO0FBQUE7QUFBQTtBQUFBLFdBU0E7QUFBQSxJQUNBLHVCQUFDLHNCQUFEO0FBQUE7QUFBQTtBQUFBO0FBQUEsV0FBaUI7QUFBQSxPQVpuQjtBQUFBO0FBQUE7QUFBQTtBQUFBLFNBYUEsS0FkRjtBQUFBO0FBQUE7QUFBQTtBQUFBLFNBZUEsS0FoQkY7QUFBQTtBQUFBO0FBQUE7QUFBQSxTQWlCQTtBQUVKO0FBQUNDLEtBckJ1QkQ7QUFBRyxJQUFBQztBQUFBLGFBQUFBLElBQUEiLCJuYW1lcyI6WyJCcm93c2VyUm91dGVyIiwiUm91dGVzIiwiUm91dGUiLCJUb2FzdGVyIiwiTGFuZGluZyIsIkxvZ2luIiwiTWVyY2hhbnREYXNoYm9hcmQiLCJQdWJsaWNBcHAiLCJQcmljaW5nIiwiQ2hlY2tvdXQiLCJTdXBlckFkbWluIiwiU2NhbkFuZEdvIiwiQXV0aFByb3ZpZGVyIiwiVGVuYW50UHJvdmlkZXIiLCJQV0FJbnN0YWxsUHJvbXB0IiwiQXBwIiwiX2MiXSwiaWdub3JlTGlzdCI6W10sInNvdXJjZXMiOlsiQXBwLnRzeCJdLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIEBsaWNlbnNlXG4gKiBTUERYLUxpY2Vuc2UtSWRlbnRpZmllcjogQXBhY2hlLTIuMFxuICovXG5cbmltcG9ydCBSZWFjdCBmcm9tICdyZWFjdCc7XG5pbXBvcnQgeyBCcm93c2VyUm91dGVyLCBSb3V0ZXMsIFJvdXRlIH0gZnJvbSAncmVhY3Qtcm91dGVyLWRvbSc7XG5pbXBvcnQgeyBUb2FzdGVyIH0gZnJvbSAnc29ubmVyJztcbmltcG9ydCBMYW5kaW5nIGZyb20gJy4vcGFnZXMvTGFuZGluZyc7XG5pbXBvcnQgTG9naW4gZnJvbSAnLi9wYWdlcy9Mb2dpbic7XG5pbXBvcnQgTWVyY2hhbnREYXNoYm9hcmQgZnJvbSAnLi9wYWdlcy9NZXJjaGFudERhc2hib2FyZCc7XG5pbXBvcnQgUHVibGljQXBwIGZyb20gJy4vcGFnZXMvUHVibGljQXBwJztcbmltcG9ydCBQcmljaW5nIGZyb20gJy4vcGFnZXMvUHJpY2luZyc7XG5pbXBvcnQgQ2hlY2tvdXQgZnJvbSAnLi9wYWdlcy9DaGVja291dCc7XG5pbXBvcnQgU3VwZXJBZG1pbiBmcm9tICcuL3BhZ2VzL1N1cGVyQWRtaW4nO1xuaW1wb3J0IFNjYW5BbmRHbyBmcm9tICcuL3BhZ2VzL1NjYW5BbmRHbyc7XG5pbXBvcnQgeyBBdXRoUHJvdmlkZXIgfSBmcm9tICcuL2NvbnRleHRzL0F1dGhDb250ZXh0JztcbmltcG9ydCB7IFRlbmFudFByb3ZpZGVyIH0gZnJvbSAnLi9jb250ZXh0cy9UZW5hbnRDb250ZXh0JztcbmltcG9ydCB7IFBXQUluc3RhbGxQcm9tcHQgfSBmcm9tICcuL2NvbXBvbmVudHMvUFdBSW5zdGFsbFByb21wdCc7XG5cbmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIEFwcCgpIHtcbiAgcmV0dXJuIChcbiAgICA8VGVuYW50UHJvdmlkZXI+XG4gICAgICA8QXV0aFByb3ZpZGVyPlxuICAgICAgICA8QnJvd3NlclJvdXRlcj5cbiAgICAgICAgICA8VG9hc3RlciBwb3NpdGlvbj1cInRvcC1jZW50ZXJcIiAvPlxuICAgICAgICAgIDxSb3V0ZXM+XG4gICAgICAgICAgICA8Um91dGUgcGF0aD1cIi9cIiBlbGVtZW50PXs8TGFuZGluZyAvPn0gLz5cbiAgICAgICAgICAgIDxSb3V0ZSBwYXRoPVwiL3ByaWNpbmdcIiBlbGVtZW50PXs8UHJpY2luZyAvPn0gLz5cbiAgICAgICAgICAgIDxSb3V0ZSBwYXRoPVwiL2NoZWNrb3V0XCIgZWxlbWVudD17PENoZWNrb3V0IC8+fSAvPlxuICAgICAgICAgICAgPFJvdXRlIHBhdGg9XCIvbG9naW5cIiBlbGVtZW50PXs8TG9naW4gLz59IC8+XG4gICAgICAgICAgICA8Um91dGUgcGF0aD1cIi9tZXJjaGFudC1kYXNoYm9hcmRcIiBlbGVtZW50PXs8TWVyY2hhbnREYXNoYm9hcmQgLz59IC8+XG4gICAgICAgICAgICA8Um91dGUgcGF0aD1cIi9wdWJsaWNcIiBlbGVtZW50PXs8UHVibGljQXBwIC8+fSAvPlxuICAgICAgICAgICAgPFJvdXRlIHBhdGg9XCIvc3VwZXJhZG1pblwiIGVsZW1lbnQ9ezxTdXBlckFkbWluIC8+fSAvPlxuICAgICAgICAgICAgPFJvdXRlIHBhdGg9XCIvc2NhblwiIGVsZW1lbnQ9ezxTY2FuQW5kR28gLz59IC8+XG4gICAgICAgICAgPC9Sb3V0ZXM+XG4gICAgICAgICAgPFBXQUluc3RhbGxQcm9tcHQgLz5cbiAgICAgICAgPC9Ccm93c2VyUm91dGVyPlxuICAgICAgPC9BdXRoUHJvdmlkZXI+XG4gICAgPC9UZW5hbnRQcm92aWRlcj5cbiAgKTtcbn1cbiJdLCJmaWxlIjoiL2FwcC9hcHBsZXQvc3JjL0FwcC50c3gifQ==

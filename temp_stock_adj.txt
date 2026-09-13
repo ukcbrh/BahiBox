@@ -1,0 +1,143 @@
+
+
+export const StockAdjustmentContent = ({ currentTenantId, products, branchId, currentUser }: { currentTenantId: string | null; products: any[]; branchId: string | null; currentUser: any }) => {
+  const [productSearch, setProductSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [adjustmentType, setAdjustmentType] = useState<'adjustment_in' | 'adjustment_out'>('adjustment_in');
+  const [quantity, setQuantity] = useState('');
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) { setLoadingHistory(false); return; }
+    const { data } = await supabase
+      .from('stock_ledger')
+      .select('*, products(product_name)')
+      .in('movement_type', ['adjustment_in', 'adjustment_out'])
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => { fetchHistory(); }, [currentTenantId]);
+
+  const handleSubmit = async () => {
+    if (!selectedProduct || !quantity || parseFloat(quantity) <= 0 || !branchId || !currentUser) return;
+    setSaving(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setSaving(false); return; }
+
+    const { error } = await supabase.rpc('adjust_stock', {
+      p_product_id: selectedProduct.id,
+      p_branch_id: branchId,
+      p_movement_type: adjustmentType,
+      p_quantity: parseFloat(quantity),
+      p_reference_type: 'manual_adjustment',
+      p_reference_id: null,
+      p_notes: reason || null,
+      p_created_by: currentUser.id
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Stock adjusted successfully');
+    setSelectedProduct(null);
+    setProductSearch('');
+    setQuantity('');
+    setReason('');
+    fetchHistory();
+  };
+
+  const filteredProducts = products.filter((p: any) => p.product_name?.toLowerCase().includes(productSearch.toLowerCase()));
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-none shadow-sm bg-white dark:bg-slate-950">
+        <CardContent className="p-5 space-y-4">
+          <div>
+            <label className="text-sm font-medium">Product</label>
+            {selectedProduct ? (
+              <div className="flex items-center justify-between border border-slate-200 dark:border-slate-800 rounded-lg p-3 mt-1">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedProduct.product_name}</span>
+                <button onClick={() => setSelectedProduct(null)} className="text-xs text-primary font-semibold">Change</button>
+              </div>
+            ) : (
+              <>
+                <Input placeholder="Search product..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} />
+                {productSearch && (
+                  <div className="mt-2 border border-slate-200 dark:border-slate-800 rounded-lg max-h-48 overflow-y-auto">
+                    {filteredProducts.slice(0, 10).map((p: any) => (
+                      <button key={p.id} onClick={() => { setSelectedProduct(p); setProductSearch(''); }} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-900 text-sm border-b border-slate-100 dark:border-slate-800 last:border-0">
+                        {p.product_name} <span className="text-slate-400 text-xs">— Stock: {p.product_stock?.[0]?.current_quantity ?? 0}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Adjustment Type</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <button onClick={() => setAdjustmentType('adjustment_in')} className={"py-2 rounded-lg text-sm font-bold border-2 " + (adjustmentType === 'adjustment_in' ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>+ Increase Stock</button>
+              <button onClick={() => setAdjustmentType('adjustment_out')} className={"py-2 rounded-lg text-sm font-bold border-2 " + (adjustmentType === 'adjustment_out' ? 'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/20' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>− Decrease Stock</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Quantity</label>
+            <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Reason (e.g. Damage, Theft, Recount)</label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
+
+          <Button className="w-full h-11" onClick={handleSubmit} disabled={saving || !selectedProduct || !quantity || parseFloat(quantity) <= 0}>
+            {saving ? 'Saving...' : 'Apply Adjustment'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-none shadow-sm bg-white dark:bg-slate-950">
+        <CardContent className="p-5">
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Recent Adjustments</h3>
+          {loadingHistory ? (
+            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+          ) : history.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No adjustments recorded yet.</p>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Product</th>
+                  <th className="px-3 py-2 font-semibold">Type</th>
+                  <th className="px-3 py-2 font-semibold text-right">Qty</th>
+                  <th className="px-3 py-2 font-semibold">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {history.map((h: any) => (
+                  <tr key={h.id}>
+                    <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{h.products?.product_name}</td>
+                    <td className="px-3 py-2">
+                      <span className={"text-[10px] font-bold px-2 py-0.5 rounded-full uppercase " + (h.movement_type === 'adjustment_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')}>{h.movement_type === 'adjustment_in' ? 'Increase' : 'Decrease'}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right font-bold text-slate-600 dark:text-slate-400">{h.quantity}</td>
+                    <td className="px-3 py-2 text-slate-500">{h.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

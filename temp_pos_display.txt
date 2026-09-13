@@ -1,0 +1,83 @@
+
+
+export const ConsumerPosDisplay = () => {
+  const [searchParams] = useSearchParams();
+  const branchId = searchParams.get('branch_id');
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSession = async () => {
+    if (!branchId) { setLoading(false); return; }
+    const supabase = getSupabaseClient();
+    if (!supabase) { setLoading(false); return; }
+    const { data } = await supabase.from('pos_display_sessions').select('*').eq('branch_id', branchId).maybeSingle();
+    setSession(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchSession();
+    if (!branchId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const channel = supabase
+      .channel('pos_display_' + branchId)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pos_display_sessions', filter: 'branch_id=eq.' + branchId },
+        () => fetchSession()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [branchId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!session || session.status === 'idle') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center p-8 text-center">
+        <img src="/logolight.png" alt="BahiBox" className="h-14 mb-8 object-contain" />
+        <h1 className="text-3xl font-bold text-white mb-2">Welcome!</h1>
+        <p className="text-slate-400 text-lg">Your bill will appear here</p>
+      </div>
+    );
+  }
+
+  if (session.status === 'pending') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex flex-col items-center justify-center p-8 text-center">
+        <p className="text-white/80 text-lg font-semibold mb-1">Scan & Pay</p>
+        <p className="text-white text-5xl font-extrabold mb-6">₹{Number(session.amount).toFixed(2)}</p>
+        <div className="bg-white p-6 rounded-3xl shadow-2xl">
+          <img src={session.qr_image_url} alt="Payment QR" className="w-64 h-64 object-contain" />
+        </div>
+        <p className="text-white/90 text-sm mt-6">Scan using any UPI app</p>
+        <p className="text-white/60 text-xs mt-1">GPay · PhonePe · Paytm · BHIM</p>
+      </div>
+    );
+  }
+
+  if (session.status === 'paid') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-emerald-700 flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-6">
+          <span className="text-6xl">✓</span>
+        </div>
+        <h1 className="text-4xl font-extrabold text-white mb-2">Payment Received!</h1>
+        <p className="text-white/90 text-2xl font-bold">₹{Number(session.amount).toFixed(2)}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <p className="text-white">Waiting for next bill...</p>
+    </div>
+  );
+};

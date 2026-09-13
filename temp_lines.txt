@@ -1,0 +1,46 @@
+      error = res.error;
+    }
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`);
+      return;
+    }
+    toast.success(editingItem ? "Item updated" : "Item added");
+    setIsAddingItem(false);
+    setEditingItem(null);
+    setNewItem({
+      item_name: "",
+      category_id: "",
+      price: "",
+      description: "",
+      is_veg: "true",
+      photo: "",
+      is_available: true,
+    });
+    fetchItems();
+  };
+
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setNewItem({
+      item_name: item.item_name || "",
+      category_id: item.category_id || "",
+      price: item.price?.toString() || "",
+      description: item.description || "",
+      is_veg: item.is_veg ? "true" : "false",
+      photo: item.photo || "",
+      is_available: item.is_available !== false,
+    });
+    setIsAddingItem(true);
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    if (!window.confirm("Delete this menu item?")) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { error } = await supabase
+      .from("restaurant_menu_items")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast.error(`Failed to delete: ${error.message}`);
+      return;

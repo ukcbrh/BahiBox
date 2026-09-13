@@ -1,0 +1,143 @@
+ame={"text-xs font-bold " + (c.balance_label === 'Due' ? 'text-red-600' : 'text-emerald-600')}>
+                            ₹{Math.abs(c.balance).toFixed(0)} {c.balance_label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-400">{c.phone || ''}{c.address ? ' · ' + c.address : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400 mt-2">Address</label>
+            <textarea
+              className="flex w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-3 py-2 text-sm outline-none resize-none min-h-[60px]"
+              readOnly
+              value={selectedCustomer ? `${selectedCustomer.address || ''} ${selectedCustomer.city || ''} ${selectedCustomer.pincode || ''}`.trim() : ''}
+            />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">State</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.state || ''} placeholder="State" />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Phone No</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.phone || ''} placeholder="Phone No" />
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">GSTIN / PAN</label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.gstin || selectedCustomer?.pan || ''} />
+          </div>
+          {selectedCustomer && selectedCustomer.balance_label && selectedCustomer.balance_label !== 'Settled' && (
+            <div className={"rounded-lg p-3 border-2 " + (selectedCustomer.balance_label === 'Due' ? 'border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900' : 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900')}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  {selectedCustomer.balance_label === 'Due' ? 'Existing Amount Due' : 'Advance Available'}
+                </span>
+                <span className={"text-lg font-extrabold " + (selectedCustomer.balance_label === 'Due' ? 'text-red-600' : 'text-emerald-600')}>
+                  ₹{Math.abs(selectedCustomer.balance).toFixed(2)}
+                </span>
+              </div>
+              {selectedCustomer.balance_label === 'Advance' && (
+                <div className="grid grid-cols-[140px_1fr] items-center gap-2">
+                  <label className="text-xs text-slate-600 dark:text-slate-400">Apply from Advance (₹)</label>
+                  <Input type="number" className="h-8" placeholder="Amount to adjust" value={advanceToApply} onChange={e => setAdvanceToApply(e.target.value)} />
+                </div>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Rev. Charge</label>
+            <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={isReverseCharge ? 'yes' : 'no'} onChange={e => setIsReverseCharge(e.target.value === 'yes')}>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Ship To</label>
+            <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={shipToSame ? 'same' : 'other'} onChange={e => setShipToSame(e.target.value === 'same')}>
+              <option value="same">Same as Billing Address</option>
+              <option value="other">Other Address</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+            <label className="text-sm text-slate-600 dark:text-slate-400">Place of Supply<span className="text-red-500">*</span></label>
+            <Input className="h-9 bg-slate-50 dark:bg-slate-900/50" readOnly value={selectedCustomer?.state || ''} placeholder="Place of Supply" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="shadow-sm border-slate-200 dark:border-slate-800 h-full">
+        <CardHeader className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">Invoice Detail</CardTitle>
+        </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Invoice Type</label>
+              <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={invoiceType} onChange={e => setInvoiceType(e.target.value)}>
+                <option value="b2b">B2B</option>
+                <option value="b2c">B2C</option>
+                <option value="export">Export</option>
+                <option value="sez">SEZ</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Invoice No.<span className="text-red-500">*</span></label>
+                <div className="flex gap-1">
+                  <Input className="h-9 w-1/3" placeholder="Prefix" value={invoicePrefix} onChange={e => setInvoicePrefix(e.target.value)} />
+                  <Input className="h-9 w-1/3" placeholder="Number" value={invoiceNumberPart} onChange={e => setInvoiceNumberPart(e.target.value)} />
+                  <Input className="h-9 w-1/3" placeholder="Suffix" value={invoiceSuffix} onChange={e => setInvoiceSuffix(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-[60px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Date<span className="text-red-500">*</span></label>
+                <Input type="date" className="h-9 w-full" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">Challan No.</label>
+                <Input className="h-9 w-full" placeholder="Challan No." value={challanNo} onChange={e => setChallanNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">Challan Date</label>
+                <Input type="date" className="h-9 w-full" value={challanDate} onChange={e => setChallanDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">P.O. No.</label>
+                <Input className="h-9 w-full" placeholder="P.O. No." value={poNo} onChange={e => setPoNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">P.O. Date</label>
+                <Input type="date" className="h-9 w-full" value={poDate} onChange={e => setPoDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400">L.R. No.</label>
+                <Input className="h-9 w-full" placeholder="L.R. No." value={lrNo} onChange={e => setLrNo(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+                <label className="text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">E-Way No.</label>
+                <Input className="h-9 w-full" placeholder="E-Way No." value={ewayNo} onChange={e => setEwayNo(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-2">
+              <label className="text-sm text-slate-600 dark:text-slate-400">Delivery</label>
+              <select className="h-9 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm" value={deliveryMode} onChange={e => setDeliveryMode(e.target.value)}>
+                <option value="">Select Delivery Mode</option>
+                <option value="road">Road</option>
+                <option value="rail">Rail</option>
+                <option value="air">Air</option>
+                <option value="ship">Ship</option>
+              </select>
+            </div>
+          </CardContent>
+      </Card>
+      </div>
+
+      <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 ro

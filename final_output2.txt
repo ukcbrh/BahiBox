@@ -1,0 +1,44 @@
+=== 1 ===
+
+> react-example@0.0.0 build
+> vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs
+
+vite v6.4.3 building for production...
+transforming...
+✓ 3041 modules transformed.
+[plugin vite:reporter] 
+(!) /app/applet/src/lib/supabase.ts is dynamically imported by /app/applet/src/pages/Login.tsx, /app/applet/src/pages/Login.tsx, /app/applet/src/pages/Login.tsx but also statically imported by /app/applet/src/components/BranchSettings.tsx, /app/applet/src/components/BrandingWhiteLabelSettings.tsx, /app/applet/src/components/BusinessProfileSettings.tsx, /app/applet/src/components/ChangePasswordCard.tsx, /app/applet/src/components/NotificationBell.tsx, /app/applet/src/components/PaymentComponents.tsx, /app/applet/src/components/ServiceProviderKYCView.tsx, /app/applet/src/components/SettingsGeneral.tsx, /app/applet/src/components/SettingsView.tsx, /app/applet/src/components/StaffRolesView.tsx, /app/applet/src/components/UserActivityTimelineModal.tsx, /app/applet/src/components/WalletComponents.tsx, /app/applet/src/components/WhiteLabelRequestsView.tsx, /app/applet/src/components/auth/ResetPasswordModal.tsx, /app/applet/src/components/consumer/CompleteProfileModal.tsx, /app/applet/src/components/consumer/ConsumerAuthModal.tsx, /app/applet/src/components/consumer/ConsumerProfileView.tsx, /app/applet/src/components/consumer/LiveTrackingMap.tsx, /app/applet/src/components/consumer/MoveView.tsx, /app/applet/src/components/consumer/OrderHistoryView.tsx, /app/applet/src/components/consumer/RideHistoryView.tsx, /app/applet/src/components/consumer/SavedAddressesView.tsx, /app/applet/src/components/hospitality/HospitalityComponents.tsx, /app/applet/src/components/mart/HeroCarousel.tsx, /app/applet/src/components/mart/MartHome.tsx, /app/applet/src/components/mart/SponsoredBanner.tsx, /app/applet/src/components/payments/BillingSubscriptionView.tsx, /app/applet/src/components/payments/ConsumerDirectoryView.tsx, /app/applet/src/components/payments/SubscriptionPlanManager.tsx, /app/applet/src/components/payments/WalletAnalyticsView.tsx, /app/applet/src/components/reports/BankReconciliationView.tsx, /app/applet/src/components/reports/BatchReportView.tsx, /app/applet/src/components/reports/CompanyLedgerView.tsx, /app/applet/src/components/reports/InwardPaymentReportView.tsx, /app/applet/src/components/reports/OutwardPaymentReportView.tsx, /app/applet/src/components/reports/PurchaseOutstandingView.tsx, /app/applet/src/components/reports/PurchaseReportView.tsx, /app/applet/src/components/reports/RecurringInvoicesView.tsx, /app/applet/src/components/reports/SaleOutstandingView.tsx, /app/applet/src/components/reports/SaleReportView.tsx, /app/applet/src/components/reports/SalesByProductReport.tsx, /app/applet/src/components/reports/ShiftReport.tsx, /app/applet/src/components/reports/StockReportView.tsx, /app/applet/src/components/retail/CreateCreditNote.tsx, /app/applet/src/components/retail/CreateDebitNote.tsx, /app/applet/src/components/retail/CreateDeliveryChallanInward.tsx, /app/applet/src/components/retail/CreateDeliveryChallanOutward.tsx, /app/applet/src/components/retail/CreateInwardPayment.tsx, /app/applet/src/components/retail/CreateOutwardPayment.tsx, /app/applet/src/components/retail/CreatePurchaseInvoice.tsx, /app/applet/src/components/retail/CreateSaleInvoice.tsx, /app/applet/src/components/retail/CreditNoteList.tsx, /app/applet/src/components/retail/CustomerSupplierForm.tsx, /app/applet/src/components/retail/DebitNoteList.tsx, /app/applet/src/components/retail/DeliveryChallanInwardList.tsx, /app/applet/src/components/retail/DeliveryChallanOutwardList.tsx, /app/applet/src/components/retail/InvoiceHistory.tsx, /app/applet/src/components/retail/InwardPaymentList.tsx, /app/applet/src/components/retail/LabelPrintModal.tsx, /app/applet/src/components/retail/OutwardPaymentList.tsx, /app/applet/src/components/retail/PartyLedgerModal.tsx, /app/applet/src/components/retail/PlatformUsageWalletView.tsx, /app/applet/src/components/retail/PurchaseInvoices.tsx, /app/applet/src/components/retail/RetailCustomerSupplier.tsx, /app/applet/src/components/retail/RetailDashboard.tsx, /app/applet/src/components/retail/RetailDiscountsOffers.tsx, /app/applet/src/components/retail/RetailPOSFullScreen.tsx, /app/applet/src/components/retail/RetailProductsInventory.tsx, /app/applet/src/components/retail/RetailPurchases.tsx, /app/applet/src/components/retail/RetailStoreSettings.tsx, /app/applet/src/components/retail/StaffActivityView.tsx, /app/applet/src/components/services/ProviderProfileForm.tsx, /app/applet/src/components/services/RiderJobsView.tsx, /app/applet/src/components/services/ServicesAdminSettings.tsx, /app/applet/src/components/services/StaffTeamView.tsx, /app/applet/src/components/superadmin/MartSponsoredAdminView.tsx, /app/applet/src/components/superadmin/MerchantProfileModal.tsx, /app/applet/src/components/superadmin/PlanFeatureMatrix.tsx, /app/applet/src/components/superadmin/PlatformRatesSettings.tsx, /app/applet/src/components/superadmin/UsageRateCardEditor.tsx, /app/applet/src/components/superadmin/WithdrawalRequestsView.tsx, /app/applet/src/contexts/AuthContext.tsx, /app/applet/src/contexts/TenantContext.tsx, /app/applet/src/hooks/useModules.ts, /app/applet/src/hooks/usePlans.ts, /app/applet/src/pages/Checkout.tsx, /app/applet/src/pages/ConfirmLink.tsx, /app/applet/src/pages/Landing.tsx, /app/applet/src/pages/MerchantDashboard.tsx, /app/applet/src/pages/PublicApp.tsx, /app/applet/src/pages/RiderApp.tsx, /app/applet/src/pages/RiderLoginScreen.tsx, /app/applet/src/pages/ScanAndGo.tsx, /app/applet/src/pages/SetPassword.tsx, /app/applet/src/pages/SuperAdmin.tsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+computing gzip size...
+dist/index.html                                                0.91 kB │ gzip:     0.47 kB
+dist/assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2      7.42 kB
+dist/assets/geist-vietnamese-wght-normal-6IgcOCM7.woff2        8.00 kB
+dist/assets/geist-cyrillic-wght-normal-BEAKL7Jp.woff2         15.08 kB
+dist/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2        16.51 kB
+dist/assets/geist-latin-wght-normal-BgDaEnEv.woff2            29.40 kB
+dist/assets/index-BB_LOAyc.css                               134.24 kB │ gzip:    20.51 kB
+dist/assets/index-Cw3iW-bG.js                              6,043.25 kB │ gzip: 1,265.84 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 29.57s
+
+  dist/server.cjs       63.6kb
+  dist/server.cjs.map  106.6kb
+
+⚡ Done in 21ms
+=== 2 ===
+8:import { CreditNoteList } from '../retail/CreditNoteList';
+9:import { DebitNoteList } from '../retail/DebitNoteList';
+31:  if (activeDoc === 'credit_note') return <CreditNoteList onBack={() => setActiveDoc(null)} />;
+32:  if (activeDoc === 'debit_note') return <DebitNoteList onBack={() => setActiveDoc(null)} />;
+=== 3 ===
+23:  credit_note: 'Credit Note',
+24:  debit_note: 'Debit Note'
+40:    credit_note: { prefix: 'CN-', printerSize: 'A4' },
+41:    debit_note: { prefix: 'DN-', printerSize: 'A4' }
+393:          {renderChannelSettings('credit_note')}
+394:          {renderChannelSettings('debit_note')}

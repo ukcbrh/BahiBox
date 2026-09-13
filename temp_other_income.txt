@@ -1,0 +1,181 @@
+
+
+export const OtherIncomePage = () => {
+  const { currentTenantId, user } = useAuth();
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [incomeList, setIncomeList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [categoryId, setCategoryId] = useState('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [incomeDate, setIncomeDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [receivedFrom, setReceivedFrom] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase || !currentTenantId) { setLoading(false); return; }
+
+    const { data: branchData } = await supabase.from('branches').select('id').eq('tenant_id', currentTenantId).eq('module_key', 'retail').limit(1).single();
+    setBranchId(branchData?.id || null);
+
+    const { data: catData } = await supabase.from('other_income_categories').select('*').eq('tenant_id', currentTenantId).eq('is_active', true).order('category_name');
+    setCategories(catData || []);
+
+    const { data: incData } = await supabase.from('other_income').select('*, other_income_categories(category_name)').eq('tenant_id', currentTenantId).order('income_date', { ascending: false }).limit(50);
+    setIncomeList(incData || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, [currentTenantId]);
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName || !currentTenantId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.from('other_income_categories').insert({ tenant_id: currentTenantId, category_name: newCategoryName }).select().single();
+    if (error) { toast.error(error.message); return; }
+    toast.success('Category added');
+    setNewCategoryName('');
+    setShowNewCategory(false);
+    await fetchData();
+    setCategoryId(data.id);
+  };
+
+  const handleSubmit = async () => {
+    if (!categoryId || !amount || parseFloat(amount) <= 0 || !currentTenantId || !branchId || !user) return;
+    setSaving(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) { setSaving(false); return; }
+
+    const { error } = await supabase.rpc('record_other_income', {
+      p_tenant_id: currentTenantId,
+      p_branch_id: branchId,
+      p_category_id: categoryId,
+      p_amount: parseFloat(amount),
+      p_payment_method: paymentMethod,
+      p_income_date: incomeDate,
+      p_description: description || null,
+      p_received_from: receivedFrom || null,
+      p_created_by: user.id
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Income recorded');
+    setCategoryId('');
+    setAmount('');
+    setReceivedFrom('');
+    setDescription('');
+    fetchData();
+  };
+
+  const totalToday = incomeList.filter((e: any) => e.income_date === new Date().toISOString().slice(0, 10)).reduce((s: number, e: any) => s + e.amount, 0);
+
+  return (
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Other Income</h2>
+        <p className="text-slate-500 dark:text-slate-400">Record income from sources other than regular sales, like rent received or interest.</p>
+      </div>
+
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <label className="text-sm font-medium">Category</label>
+            <div className="flex gap-2">
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="flex-1 h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm">
+                <option value="">Select category</option>
+                {categories.map((c: any) => <option key={c.id} value={c.id}>{c.category_name}</option>)}
+              </select>
+              <Button variant="outline" onClick={() => setShowNewCategory(!showNewCategory)}>+ New</Button>
+            </div>
+            {showNewCategory && (
+              <div className="flex gap-2 mt-2">
+                <Input placeholder="New category name (e.g. Rent Received, Interest)" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+                <Button onClick={handleAddCategory} disabled={!newCategoryName}>Add</Button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">Amount (₹)</label>
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Income Date</label>
+              <Input type="date" value={incomeDate} onChange={(e) => setIncomeDate(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Payment Method</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {['cash', 'bank'].map((m) => (
+                <button key={m} onClick={() => setPaymentMethod(m)} className={"py-2 rounded-lg text-xs font-bold uppercase border-2 " + (paymentMethod === m ? 'border-primary text-primary' : 'border-slate-200 dark:border-slate-800 text-slate-500')}>{m}</button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Received From (optional)</label>
+            <Input placeholder="e.g. Tenant, Bank Interest" value={receivedFrom} onChange={(e) => setReceivedFrom(e.target.value)} />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium">Description (optional)</label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+
+          <Button className="w-full h-12" onClick={handleSubmit} disabled={saving || !categoryId || !amount || parseFloat(amount) <= 0}>
+            {saving ? 'Recording...' : 'Record Income · ₹' + (amount || 0)}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-slate-900 dark:text-slate-100">Recent Income</h3>
+            <div className="text-right">
+              <p className="text-xs text-slate-500">Today's Total</p>
+              <p className="text-lg font-extrabold text-emerald-600">₹{totalToday.toLocaleString('en-IN')}</p>
+            </div>
+          </div>
+          {loading ? (
+            <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+          ) : incomeList.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No income recorded yet.</p>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Date</th>
+                  <th className="px-3 py-2 font-semibold">Category</th>
+                  <th className="px-3 py-2 font-semibold">Received From</th>
+                  <th className="px-3 py-2 font-semibold text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {incomeList.map((e: any) => (
+                  <tr key={e.id}>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{e.income_date}</td>
+                    <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-100">{e.other_income_categories?.category_name}</td>
+                    <td className="px-3 py-2 text-slate-500">{e.received_from || '-'}</td>
+                    <td className="px-3 py-2 text-right font-bold text-emerald-600">₹{e.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

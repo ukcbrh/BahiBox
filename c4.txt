@@ -1,0 +1,96 @@
+                  {visibleColumns.discount && (
+                    <td className="px-4 py-2 text-right">
+                      <Input type="number" className="h-8 text-right w-full min-w-[60px]" value={item.discount} onChange={e => updateItem(item.id, 'discount', parseFloat(e.target.value) || 0)} />
+                    </td>
+                  )}
+                  <td className="px-4 py-2 text-right text-slate-600 dark:text-slate-400">{item.tax_rate}%</td>
+                  <td className="px-4 py-2 text-right font-medium">₹ {(() => {
+                    const priceAfterDiscount = item.price * (1 - (item.discount || 0) / 100);
+                    return (item.p_tax ? (item.qty * priceAfterDiscount) : (item.qty * priceAfterDiscount * (1 + item.tax_rate / 100))).toFixed(2);
+                  })()}</td>
+                  <td className="px-4 py-2 text-center">
+                    <button onClick={() => removeItem(item.id)} className="text-slate-400 hover:text-red-500">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              <tr>
+                <td className="px-4 py-2 relative" colSpan={30}>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Type to search and select item..." 
+                      className="h-9 w-full max-w-md"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      onFocus={() => setIsItemFocused(true)}
+                      onBlur={() => setTimeout(() => setIsItemFocused(false), 200)}
+                      onKeyDown={handleItemKeyDown}
+                    />
+                  </div>
+                  {isItemFocused && (
+                    <div className="absolute z-50 w-full max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md shadow-lg max-h-[200px] overflow-y-auto mt-1">
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map(p => (
+                          <div 
+                            key={p.id} 
+                            className="px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer flex justify-between items-center"
+                            onClick={() => handleAddItem(p)}
+                          >
+                            <span>{p.product_name}</span>
+                            <span className="text-slate-500 dark:text-slate-400 text-xs">₹{p.purchase_price}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-slate-500 dark:text-slate-400 text-sm">No items found. Press Enter to add "{searchTerm}"</div>
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      
+      {/* Right Bottom Section (Totals & Actions) */}
+      <div className="flex justify-end pt-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-600 dark:text-slate-400">Taxable Amount</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">₹ {subtotal.toFixed(2)}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-600 dark:text-slate-400">Total Tax</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">₹ {taxAmount.toFixed(2)}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-3 bg-yellow-100/50 px-2 -mx-2">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Grand Total</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">₹ {grandTotal.toFixed(2)}</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-6 gap-2">
+              <div className="flex gap-2">
+                <Button variant="outline" className="h-9 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400" onClick={onBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  className="h-9 bg-[#00b884] hover:bg-[#00a375] text-white px-6"
+                  onClick={handleSave}
+                  disabled={loading}
+                >
+                  <Save className="mr-2 h-4 w-4" /> {loading ? 'Saving...' : 'Save & Print'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

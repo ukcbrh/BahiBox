@@ -1,0 +1,172 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/src/components/ui/card';
+import { Button } from '@/src/components/ui/button';
+import { Input } from '@/src/components/ui/input';
+import { ArrowLeft, Truck } from 'lucide-react';
+import { getSupabaseClient } from '@/src/lib/supabase';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { toast } from 'sonner';
+import { ReportActionButtons } from './ReportActionButtons';
+
+export function OutwardPaymentReportView({ onBack }: { onBack?: () => void }) {
+  const { currentTenantId } = useAuth();
+  const [startDate, setStartDate] = useState(new Date(new Date().setDate(1)).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [supplierMap, setSupplierMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchData();
+  }, [currentTenantId, startDate, endDate]);
+
+  const fetchData = async () => {
+    if (!currentTenantId) return;
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('supplier_payments')
+        .select('*')
+        .eq('tenant_id', currentTenantId)
+        .gte('payment_date', startDate)
+        .lte('payment_date', endDate)
+        .order('payment_date', { ascending: false });
+      if (error) throw error;
+      setPayments(data || []);
+
+      const supplierIds = [...new Set((data || []).map((p: any) => p.supplier_id).filter(Boolean))];
+      if (supplierIds.length > 0) {
+        const { data: supData } = await supabase.from('suppliers').select('id, supplier_name').in('id', supplierIds);
+        const map: Record<string, string> = {};
+        (supData || []).forEach((s: any) => { map[s.id] = s.supplier_name; });
+        setSupplierMap(map);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch outward payment report');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const methodBreakdown: Record<string, number> = {};
+  payments.forEach((p: any) => {
+    methodBreakdown[p.payment_method] = (methodBreakdown[p.payment_method] || 0) + (p.amount || 0);
+  });
+
+  const reportRows = payments.map((p: any) => ({
+    'Date': p.payment_date,
+    'Supplier': supplierMap[p.supplier_id] || 'Unknown',
+    'Method': p.payment_method,
+    'Reference': p.reference_note || '-',
+    'Amount': Number(p.amount || 0)
+  }));
+
+  const reportColumns = [
+    { key: 'Date', label: 'Date' },
+    { key: 'Supplier', label: 'Supplier' },
+    { key: 'Method', label: 'Method' },
+    { key: 'Reference', label: 'Reference' },
+    { key: 'Amount', label: 'Amount', align: 'right' as const }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Outward Payment Report</h2>
+          <p className="text-slate-500 dark:text-slate-400">All supplier payments made in the selected period.</p>
+        </div>
+        <ReportActionButtons
+          data={reportRows}
+          columns={reportColumns}
+          filename={`outward_payment_report_${startDate}_to_${endDate}`}
+          title="Outward Payment Report"
+          subtitle={`${startDate} to ${endDate}`}
+        />
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-4 flex flex-wrap gap-4 items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Start Date</label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">End Date</label>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <Button onClick={fetchData} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-none shadow-sm bg-gradient-to-br from-red-50 to-red-100/50">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-red-700 uppercase">Total Paid Out</p>
+            <p className="text-3xl font-bold text-red-800 mt-1">₹{totalPaid.toLocaleString('en-IN')}</p>
+            <p className="text-xs text-red-600 mt-1">{payments.length} payment{payments.length !== 1 ? 's' : ''}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase mb-2">By Payment Method</p>
+            <div className="space-y-1">
+              {Object.entries(methodBreakdown).map(([method, amt]) => (
+                <div key={method} className="flex justify-between text-sm">
+                  <span className="capitalize text-slate-600 dark:text-slate-400">{method}</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">₹{amt.toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+              {Object.keys(methodBreakdown).length === 0 && <p className="text-xs text-slate-400">No data.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900 border-b">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold">Supplier</th>
+                <th className="px-6 py-4 font-semibold">Method</th>
+                <th className="px-6 py-4 font-semibold">Reference</th>
+                <th className="px-6 py-4 font-semibold text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Loading report...</td></tr>
+              ) : payments.length === 0 ? (
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">No payments found for this period.</td></tr>
+              ) : (
+                payments.map((p: any) => (
+                  <tr key={p.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{p.payment_date}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
+                      <div className="flex items-center"><Truck className="h-4 w-4 mr-2 text-slate-400" />{supplierMap[p.supplier_id] || 'Unknown'}</div>
+                    </td>
+                    <td className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{p.payment_method}</td>
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{p.reference_note || '-'}</td>
+                    <td className="px-6 py-4 text-right font-bold text-red-600">₹{p.amount?.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}

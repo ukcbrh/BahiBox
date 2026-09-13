@@ -1,0 +1,495 @@
+// 14b. Food Restaurant Menu + Cart + Checkout + Tracking
+const FoodRestaurantMenu = ({
+  restaurant,
+  onBack,
+}: {
+  restaurant: any;
+  onBack: () => void;
+}) => {
+  const { user } = useAuth();
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuCategories, setMenuCategories] = useState<any[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [cart, setCart] = useState<
+    {
+      menu_item_id: string;
+      item_name: string;
+      price: number;
+      quantity: number;
+    }[]
+  >([]);
+  const [screen, setScreen] = useState<"menu" | "checkout" | "tracking">(
+    "menu",
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "wallet">("cod");
+  const [placing, setPlacing] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState<any>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    supabase
+      .from("restaurant_menu_items")
+      .select("*")
+      .eq("tenant_id", restaurant.id)
+      .eq("is_active", true)
+      .eq("is_available", true)
+      .then(({ data }: any) => {
+        if (data) setMenuItems(data);
+      });
+    supabase
+      .from("restaurant_menu_categories")
+      .select("*")
+      .eq("tenant_id", restaurant.id)
+      .eq("is_active", true)
+      .order("display_order")
+      .then(({ data }: any) => {
+        if (data) setMenuCategories(data);
+      });
+  }, [restaurant.id]);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+    if (authMode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (error) {
+        toast.error(error.message);
+        setAuthLoading(false);
+        return;
+      }
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email: authEmail,
+        password: authPassword,
+      });
+      if (error) {
+        toast.error(error.message);
+        setAuthLoading(false);
+        return;
+      }
+      toast.success("Account created!");
+    }
+    setAuthLoading(false);
+  };
+
+  const addToCart = (item: any) => {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.menu_item_id === item.id);
+      if (existing)
+        return prev.map((c) =>
+          c.menu_item_id === item.id ? { ...c, quantity: c.quantity + 1 } : c,
+        );
+      return [
+        ...prev,
+        {
+          menu_item_id: item.id,
+          item_name: item.item_name,
+          price: item.price,
+          quantity: 1,
+        },
+      ];
+    });
+  };
+
+  const updateCartQty = (menuItemId: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((c) =>
+          c.menu_item_id === menuItemId
+            ? { ...c, quantity: Math.max(0, c.quantity + delta) }
+            : c,
+        )
+        .filter((c) => c.quantity > 0),
+    );
+  };
+
+  const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  const filteredMenuItems = activeCategoryId
+    ? menuItems.filter((m) => m.category_id === activeCategoryId)
+    : menuItems;
+
+  const handlePlaceOrder = async () => {
+    if (!user || !deliveryAddress || cart.length === 0) return;
+    setPlacing(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setPlacing(false);
+      return;
+    }
+    const branchRes = await supabase
+      .from("branches")
+      .select("id")
+      .eq("tenant_id", restaurant.id)
+      .limit(1)
+      .single();
+    const branchId = branchRes.data?.id;
+    if (!branchId) {
+      toast.error("Restaurant setup incomplete");
+      setPlacing(false);
+      return;
+    }
+    const { data, error } = await supabase.rpc("create_food_order", {
+      p_tenant_id: restaurant.id,
+      p_branch_id: branchId,
+      p_user_id: user.id,
+      p_customer_name: user.email || "Guest",
+      p_customer_phone: customerPhone,
+      p_delivery_address: deliveryAddress,
+      p_payment_method: paymentMethod,
+      p_items: cart.map((c) => ({
+        menu_item_id: c.menu_item_id,
+        quantity: c.quantity,
+      })),
+      p_order_type: "online",
+    });
+    if (error) {
+      toast.error(`Failed to place order: ${error.message}`);
+      setPlacing(false);
+      return;
+    }
+    toast.success("Order placed!");
+    setPlacedOrder({ id: data.order_id, token_number: data.token_number });
+    setScreen("tracking");
+    setPlacing(false);
+  };
+
+  if (!user && screen !== "menu") {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm shadow-xl">
+          <CardContent className="p-6">
+            <div className="text-center mb-6">
+              <Utensils className="mx-auto h-10 w-10 text-primary mb-2" />
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                {restaurant.business_name}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {authMode === "login" ? "Log in" : "Sign up"} to place order
+              </p>
+            </div>
+            <form onSubmit={handleAuth} className="space-y-3">
+              <Input
+                required
+                type="email"
+                placeholder="Email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+              />
+              <Input
+                required
+                type="password"
+                placeholder="Password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+              />
+              <Button
+                type="submit"
+                className="w-full h-11"
+                disabled={authLoading}
+              >
+                {authLoading
+                  ? "Please wait..."
+                  : authMode === "login"
+                    ? "Log In"
+                    : "Sign Up"}
+              </Button>
+            </form>
+            <button
+              onClick={() =>
+                setAuthMode(authMode === "login" ? "signup" : "login")
+              }
+              className="w-full text-center text-sm text-primary font-semibold mt-4"
+            >
+              {authMode === "login"
+                ? "New here? Sign up"
+                : "Already have an account? Log in"}
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (screen === "tracking" && placedOrder) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm shadow-xl text-center">
+          <CardContent className="p-8">
+            <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500 mb-4" />
+            {placedOrder.token_number && (
+              <p className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">
+                #{placedOrder.token_number}
+              </p>
+            )}
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              Order Placed!
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">
+              Your order from {restaurant.business_name} is being prepared.
+              You'll be notified when it's out for delivery.
+            </p>
+            <Button className="w-full h-11" onClick={onBack}>
+              Order Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (screen === "checkout") {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="max-w-md mx-auto pt-6 space-y-4">
+          <button
+            onClick={() => setScreen("menu")}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-400"
+          >
+            <ArrowLeft size={16} /> Back to Menu
+          </button>
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Checkout
+              </h2>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">
+                  Delivery Address
+                </label>
+                <Input
+                  required
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Full delivery address"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500">
+                  Mobile Number
+                </label>
+                <Input
+                  required
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="10-digit mobile"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPaymentMethod("cod")}
+                  className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 ${paymentMethod === "cod" ? "border-primary text-primary" : "border-slate-200 dark:border-slate-800 text-slate-500"}`}
+                >
+                  Cash on Delivery
+                </button>
+                <button
+                  onClick={() => setPaymentMethod("wallet")}
+                  className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 ${paymentMethod === "wallet" ? "border-primary text-primary" : "border-slate-200 dark:border-slate-800 text-slate-500"}`}
+                >
+                  BahiBox Coin
+                </button>
+              </div>
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  Total
+                </span>
+                <span className="font-extrabold text-lg text-primary">
+                  ₹{cartTotal}
+                </span>
+              </div>
+              <Button
+                className="w-full h-12"
+                disabled={
+                  placing || !deliveryAddress || customerPhone.length < 10
+                }
+                onClick={handlePlaceOrder}
+              >
+                {placing ? "Placing..." : `Place Order · ₹${cartTotal}`}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-10 flex items-center gap-3">
+        <button onClick={onBack} className="text-slate-600 dark:text-slate-400">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          {restaurant.business_name}
+        </h1>
+      </div>
+      <div className="p-4 space-y-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <button
+            onClick={() => setActiveCategoryId(null)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 ${!activeCategoryId ? "bg-primary text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+          >
+            All
+          </button>
+          {menuCategories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategoryId(cat.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 ${activeCategoryId === cat.id ? "bg-primary text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400"}`}
+            >
+              {cat.category_name}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {filteredMenuItems.map((item) => {
+            const inCart = cart.find((c) => c.menu_item_id === item.id);
+            return (
+              <Card key={item.id} className="overflow-hidden">
+                <div className="h-28 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                  {item.photo ? (
+                    <img
+                      src={item.photo}
+                      alt={item.item_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Utensils size={28} className="text-slate-300" />
+                  )}
+                </div>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span
+                      className={`inline-block w-2.5 h-2.5 border-2 rounded-sm ${item.is_veg ? "border-emerald-600" : "border-red-600"}`}
+                    />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
+                      {item.item_name}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-primary mb-2">
+                    ₹{item.price}
+                  </p>
+                  {inCart ? (
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => updateCartQty(item.id, -1)}
+                        className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="font-bold">{inCart.quantity}</span>
+                      <button
+                        onClick={() => updateCartQty(item.id, 1)}
+                        className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-xs"
+                      onClick={() => addToCart(item)}
+                    >
+                      Add
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+          {filteredMenuItems.length === 0 && (
+            <p className="col-span-full text-center text-slate-400 py-8 text-sm">
+              No menu items available.
+            </p>
+          )}
+        </div>
+      </div>
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4">
+          <Button className="w-full h-12" onClick={() => setScreen("checkout")}>
+            Checkout · ₹{cartTotal}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 15. Public Food Ordering App (Restaurant List + Menu + Cart + Tracking)
+export const HospitalityFoodApp = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    supabase
+      .from("branches")
+      .select("*, tenants(id, business_name)")
+      .eq("is_online_store_active", true)
+      .then(({ data }: any) => {
+        if (data) {
+          const uniqueTenants = Array.from(
+            new Map(
+              data
+                .filter((b: any) => b.tenants)
+                .map((b: any) => [
+                  b.tenants.id,
+                  { ...b.tenants, address: b.address },
+                ]),
+            ).values(),
+          );
+          setRestaurants(uniqueTenants);
+        }
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (selectedRestaurant) {
+    return (
+      <FoodRestaurantMenu
+        restaurant={selectedRestaurant}
+        onBack={() => setSelectedRestaurant(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 sticky top-0 z-10 flex items-center gap-3">
+        <button
+          onClick={() => navigate("/")}
+          className="text-slate-600 dark:text-slate-400"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Order Food
+        </h1>

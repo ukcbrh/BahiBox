@@ -1,0 +1,257 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/src/components/ui/card';
+import { Button } from '@/src/components/ui/button';
+import { Input } from '@/src/components/ui/input';
+import { ArrowLeft, Plus, Link2, X } from 'lucide-react';
+import { getSupabaseClient } from '@/src/lib/supabase';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { toast } from 'sonner';
+import { ReportActionButtons } from './ReportActionButtons';
+
+export function BankReconciliationView({ onBack }: { onBack?: () => void }) {
+  const { currentTenantId, user } = useAuth();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [statementLines, setStatementLines] = useState<any[]>([]);
+  const [systemLines, setSystemLines] = useState<any[]>([]);
+  const [selectedStatementLine, setSelectedStatementLine] = useState<any>(null);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newDesc, setNewDesc] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [newDcType, setNewDcType] = useState<'debit' | 'credit'>('credit');
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [currentTenantId]);
+
+  useEffect(() => {
+    if (selectedAccountId) fetchData();
+  }, [selectedAccountId]);
+
+  const fetchAccounts = async () => {
+    if (!currentTenantId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('chart_of_accounts')
+      .select('id, account_code, account_name')
+      .eq('tenant_id', currentTenantId)
+      .eq('account_group', 'asset')
+      .eq('is_active', true)
+      .order('account_code');
+    setAccounts(data || []);
+    if (data && data.length > 0 && !selectedAccountId) setSelectedAccountId(data[0].id);
+  };
+
+  const reportRows = [
+    ...statementLines.map((s: any) => ({
+      'Source': 'Bank Statement',
+      'Date': s.statement_date,
+      'Description': s.description,
+      'Type': s.dc_type,
+      'Amount': Number(s.amount || 0)
+    })),
+    ...systemLines.map((l: any) => ({
+      'Source': 'System Record',
+      'Date': l.journal_entries?.entry_date || '',
+      'Description': l.journal_entries?.narration || l.line_narration || '',
+      'Type': l.dc_type,
+      'Amount': Number(l.amount || 0)
+    }))
+  ];
+
+  const reportColumns = [
+    { key: 'Source', label: 'Source' },
+    { key: 'Date', label: 'Date' },
+    { key: 'Description', label: 'Description' },
+    { key: 'Type', label: 'Type' },
+    { key: 'Amount', label: 'Amount', align: 'right' as const }
+  ];
+
+  const fetchData = async () => {
+    if (!currentTenantId || !selectedAccountId) return;
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    try {
+      const { data: stmtData, error: stmtErr } = await supabase
+        .from('bank_statement_lines')
+        .select('*')
+        .eq('tenant_id', currentTenantId)
+        .eq('account_id', selectedAccountId)
+        .eq('is_reconciled', false)
+        .order('statement_date', { ascending: false });
+      if (stmtErr) throw stmtErr;
+      setStatementLines(stmtData || []);
+
+      const { data: sysData, error: sysErr } = await supabase
+        .from('journal_entry_lines')
+        .select('*, journal_entries!inner(entry_date, narration, tenant_id)')
+        .eq('account_id', selectedAccountId)
+        .eq('journal_entries.tenant_id', currentTenantId)
+        .eq('is_reconciled', false)
+        .order('journal_entries(entry_date)', { ascending: false });
+      if (sysErr) throw sysErr;
+      setSystemLines(sysData || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch reconciliation data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddStatementLine = async () => {
+    if (!newDesc || !newAmount || !selectedAccountId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase || !user) return;
+    const { error } = await supabase.from('bank_statement_lines').insert({
+      tenant_id: currentTenantId,
+      account_id: selectedAccountId,
+      statement_date: newDate,
+      description: newDesc,
+      amount: parseFloat(newAmount),
+      dc_type: newDcType,
+      created_by: user.id
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Statement line added');
+    setShowAddModal(false);
+    setNewDesc(''); setNewAmount('');
+    fetchData();
+  };
+
+  const handleMatch = async (systemLineId: string) => {
+    if (!selectedStatementLine) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { error } = await supabase.rpc('match_bank_statement_line', {
+      p_statement_line_id: selectedStatementLine.id,
+      p_journal_entry_line_id: systemLineId
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Matched successfully');
+    setSelectedStatementLine(null);
+    fetchData();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Bank Reconciliation</h2>
+          <p className="text-slate-500 dark:text-slate-400">Match bank statement entries with system records.</p>
+        </div>
+        <ReportActionButtons
+          data={reportRows}
+          columns={reportColumns}
+          filename="bank_reconciliation_report"
+          title="Bank Reconciliation (Unreconciled Items)"
+        />
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-4 flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[220px] space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Account</label>
+            <select value={selectedAccountId} onChange={e => setSelectedAccountId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm">
+              {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.account_code} - {a.account_name}</option>)}
+            </select>
+          </div>
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Statement Line
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Bank Statement (Unreconciled)</h3>
+            {loading ? (
+              <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+            ) : statementLines.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No unreconciled statement lines.</p>
+            ) : (
+              <div className="space-y-2">
+                {statementLines.map((s: any) => (
+                  <div key={s.id} onClick={() => setSelectedStatementLine(s)} className={"p-3 rounded-lg border-2 cursor-pointer " + (selectedStatementLine?.id === s.id ? 'border-primary bg-primary/5' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300')}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{s.description}</p>
+                        <p className="text-xs text-slate-500">{s.statement_date}</p>
+                      </div>
+                      <span className={"font-bold text-sm " + (s.dc_type === 'debit' ? 'text-emerald-600' : 'text-red-600')}>
+                        {s.dc_type === 'debit' ? '+' : '-'}₹{s.amount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">
+              System Records (Unreconciled) {selectedStatementLine && <span className="text-primary font-normal text-xs">— click to match</span>}
+            </h3>
+            {loading ? (
+              <p className="text-sm text-slate-400 text-center py-6">Loading...</p>
+            ) : systemLines.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No unreconciled system records.</p>
+            ) : (
+              <div className="space-y-2">
+                {systemLines.map((l: any) => (
+                  <div key={l.id} onClick={() => selectedStatementLine && handleMatch(l.id)} className={"p-3 rounded-lg border-2 " + (selectedStatementLine ? 'cursor-pointer border-slate-200 dark:border-slate-800 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' : 'border-slate-200 dark:border-slate-800 opacity-60')}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{l.line_narration || l.journal_entries?.narration || '-'}</p>
+                        <p className="text-xs text-slate-500">{l.journal_entries?.entry_date}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={"font-bold text-sm " + (l.dc_type === 'debit' ? 'text-emerald-600' : 'text-red-600')}>
+                          {l.dc_type === 'debit' ? '+' : '-'}₹{l.amount.toLocaleString('en-IN')}
+                        </span>
+                        {selectedStatementLine && <Link2 size={14} className="text-slate-400" />}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-sm shadow-xl">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100">Add Statement Line</h3>
+                <button onClick={() => setShowAddModal(false)}><X size={18} /></button>
+              </div>
+              <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
+              <Input placeholder="Description" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
+              <Input type="number" placeholder="Amount" value={newAmount} onChange={e => setNewAmount(e.target.value)} />
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setNewDcType('credit')} className={"py-2 rounded-lg text-sm font-bold border-2 " + (newDcType === 'credit' ? 'border-red-500 text-red-600 bg-red-50' : 'border-slate-200 text-slate-500')}>Debit (Out)</button>
+                <button onClick={() => setNewDcType('debit')} className={"py-2 rounded-lg text-sm font-bold border-2 " + (newDcType === 'debit' ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 'border-slate-200 text-slate-500')}>Credit (In)</button>
+              </div>
+              <Button className="w-full h-11" onClick={handleAddStatementLine}>Add Line</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}

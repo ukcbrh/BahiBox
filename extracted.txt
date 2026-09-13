@@ -1,0 +1,5 @@
+--- ProductDetailView ---
+function ProductDetailView({ product, tenantColor, onBack, addToCart, onBuyNow }
+
+--- StoreProductGrid ---
+function StoreProductGrid({ products, addToCart, onProductClick, tenantColor, onBack, storeName }

@@ -1,0 +1,213 @@
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hasActiveSubscription) {
+      alert("You already have an active subscription for this module.");
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const finalAmount = getPrice();
+      const supabase = getSupabaseClient();
+      let currentUserId = user?.id || existingMerchantId;
+      
+      let isNewUser = false;
+      let generatedPassword = formData.password;
+      if (supabase && !currentUserId && !isExistingMerchant) {
+        generatedPassword = Math.random().toString(36).slice(-8) + 'Aa1!';
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: generatedPassword,
+          options: {
+            data: {
+              full_name: formData.name,
+              role: 'merchant'
+            }
+          }
+        });
+        
+        let finalAuthError = authError;
+        if (authError && authError.message.includes('registered')) {
+           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+               email: formData.email,
+               password: formData.password
+           });
+           if (!signInError && signInData.user) {
+               currentUserId = signInData.user.id;
+               finalAuthError = null;
+               isNewUser = false;
+           } else {
+               finalAuthError = signInError || { message: "Account already exists but could not log in.", name: "AuthError" } as any;
+           }
+        } else if (!authError) {
+           currentUserId = authData?.user?.id;
+           isNewUser = true;
+           alert(`Account created successfully!\n\nYour Login Email: ${formData.email}\nYour Generated Password: ${generatedPassword}\n\nPlease save this password securely to login later.`);
+        }
+        
+        if (finalAuthError) {
+          alert("Could not complete checkout: " + finalAuthError.message);
+          setIsProcessing(false);
+          return;
+        }
+        
+        if (currentUserId && isNewUser) {
+            // Update users table
+            const { error: userError } = await supabase.from('users').update({ full_name: formData.name, phone: formData.phone, email: formData.email }).eq('id', currentUserId);
+            if (userError) console.warn("Could not insert into users table", userError);
+            
+            // Explicitly bootstrap the merchant tenant
+            const { data: newTenantId, error: bootstrapError } = await supabase.rpc('bootstrap_merchant_tenant', {
+              p_user_id: currentUserId,
+              p_business_name: formData.businessName || `${formData.name}'s Business`,
+              p_business_type: getBusinessTypeFromModule(moduleName)
+            });
+            
+            if (bootstrapError) {
+              console.error('Failed to bootstrap merchant tenant:', bootstrapError);
+            } else if (newTenantId) {
+                const tId = newTenantId;
+                const { data: branches } = await supabase.from('branches').select('id').eq('tenant_id', tId).eq('is_main_branch', true);
+                if (branches && branches.length > 0) {
+                    await supabase.from('branches').update({ address: formData.address }).eq('id', branches[0].id);
+                } else {
+                    await supabase.from('branches').insert({ tenant_id: tId, branch_name: 'Main Branch', is_main_branch: true, address: formData.address, status: 'active' });
+                }
+            }
+        } else if (currentUserId && !isNewUser) {
+            await supabase.from('users').update({
+                full_name: formData.name,
+                phone: formData.phone
+            }).eq('id', currentUserId);
+            
+            const { data: roles } = await supabase.from('user_tenant_roles').select('tenant_id').eq('user_id', currentUserId).eq('role_name', 'owner');
+            if (roles && roles.length > 0) {
+                const tId = roles[0].tenant_id;
+                if (formData.businessName) await supabase.from('tenants').update({ business_name: formData.businessName }).eq('id', tId);
+                const { data: branches } = await supabase.from('branches').select('id').eq('tenant_id', tId).eq('is_main_branch', true);
+                if (branches && branches.length > 0) {
+                    if (formData.address) await supabase.from('branches').update({ address: formData.address }).eq('id', branches[0].id);
+                }
+            }
+        }
+      }
+      
+      let resolvedTenantId = currentTenantId;
+      if (!resolvedTenantId && currentUserId) {
+        const { data: roles } = await supabase.from('user_tenant_roles').select('tenant_id').eq('user_id', currentUserId).eq('role_name', 'owner');
+        if (roles && roles.length > 0) {
+            resolvedTenantId = roles[0].tenant_id;
+        }
+      }
+      if (supabase) {
+         if (!currentUserId) {
+            alert("Please create a password or login to activate this module.");
+            setIsProcessing(false);
+            return;
+         }
+         
+         // Fetch matching plan ID for razorpay
+         const { data: matchedPlans } = await supabase.from('subscription_plans').select('id').eq('module_name', moduleName).eq('name', plan);
+         const planId = matchedPlans && matchedPlans.length > 0 ? matchedPlans[0].id : null;
+
+         if (finalAmount === 0 || plan === 'Free') {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch('/api/activate-free-plan', {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${session?.access_token || ''}`
+               },
+               body: JSON.stringify({
+                 plan_id: planId || plan,
+                 tenant_id: resolvedTenantId
+               })
+            });
+      
+            if (!response.ok) {
+               console.warn("Could not insert into merchant_subscriptions");
+            }
+            alert('Subscription Activated Successfully!');
+            navigate('/merchant-dashboard', { state: { module: moduleName } });
+            return;
+         }
+            
+         const isLoaded = await loadRazorpayScript();
+         if (!isLoaded) {
+            alert('Failed to load Razorpay SDK.');
+            setIsProcessing(false);
+            return;
+         }
+
+         const { data: { session } } = await supabase.auth.getSession();
+         const response = await fetch('/api/create-razorpay-order', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${session?.access_token || ''}`
+             },
+             body: JSON.stringify({
+                 plan_id: planId || plan,
+                 billing_cycle: selectedCycle,
+                 tenant_id: resolvedTenantId,
+                 branch_id: null
+             })
+         });
+
+         if (!response.ok) {
+             const errData = await response.json().catch(() => ({}));
+             throw new Error(errData.error || 'Failed to create Razorpay order');
+         }
+         
+         const orderData = await response.json();
+         const options = {
+             key: orderData.razorpay_key_id,
+             amount: orderData.amount,
+             currency: orderData.currency,
+             name: 'BahiBox',
+             description: `Subscription for ${displayPlanName}`,
+             order_id: orderData.razorpay_order_id,
+             handler: async function (response: any) {
+                 // Capture payment via RPC
+                 const { error } = await supabase.rpc('capture_payment', {
+                     p_payment_order_id: orderData.payment_order_id,
+                     p_razorpay_payment_id: response.razorpay_payment_id,
+                     p_method: 'razorpay',
+                     p_gateway_fee: 0,
+                     p_raw_response: response
+                 });
+                 if (error) {
+                     console.warn("Error capturing payment", error);
+                 }
+                 
+                 alert('Payment successful! Your plan has been upgraded.');
+                 navigate('/merchant-dashboard', { state: { module: moduleName } });
+             },
+             prefill: {
+                 name: formData.name,
+                 email: formData.email,
+                 contact: formData.phone
+             },
+             theme: {
+                 color: '#0f172a'
+             }
+         };
+         
+         const rzp = new (window as any).Razorpay(options);
+         rzp.on('payment.failed', function (response: any) {
+             alert('Payment failed. Please try again.');
+         });
+         rzp.open();
+         
+         setIsProcessing(false);
+         return;
+      }
+      
+    } catch (error: any) {
+      console.warn("Error during checkout process:", error);
+      alert(error.message || "There was an error processing your request. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };

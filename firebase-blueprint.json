@@ -1,0 +1,65 @@
+{
+  "schema": {
+    "users": {
+      "path": "users/{userId}",
+      "description": "User profiles and account information",
+      "fields": {
+        "name": {
+          "type": "string",
+          "description": "The user's display name",
+          "rules": ["required"]
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role (admin, manager, cashier, etc)",
+          "rules": ["required"]
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the user was created",
+          "rules": ["required"]
+        }
+      },
+      "access": {
+        "read": "request.auth != null && request.auth.uid == userId",
+        "write": "request.auth != null && request.auth.uid == userId"
+      }
+    },
+    "files": {
+      "path": "files/{fileId}",
+      "description": "Metadata for files uploaded by users",
+      "fields": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who uploaded the file",
+          "rules": ["required"]
+        },
+        "filename": {
+          "type": "string",
+          "description": "Original file name",
+          "rules": ["required"]
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Path in Firebase Storage",
+          "rules": ["required"]
+        },
+        "size": {
+          "type": "number",
+          "description": "File size in bytes",
+          "rules": ["required"]
+        },
+        "uploadedAt": {
+          "type": "timestamp",
+          "description": "Upload timestamp",
+          "rules": ["required"]
+        }
+      },
+      "access": {
+        "read": "request.auth != null && resource.data.userId == request.auth.uid",
+        "write": "request.auth != null && request.resource.data.userId == request.auth.uid",
+        "delete": "request.auth != null && resource.data.userId == request.auth.uid"
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+45:import UsageRateCardEditor from '../components/superadmin/UsageRateCardEditor';
+1095:              <UsageRateCardEditor />

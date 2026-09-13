@@ -1,0 +1,217 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/src/components/ui/card';
+import { Button } from '@/src/components/ui/button';
+import { Input } from '@/src/components/ui/input';
+import { ArrowLeft, BookOpen } from 'lucide-react';
+import { getSupabaseClient } from '@/src/lib/supabase';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { toast } from 'sonner';
+import { ReportActionButtons } from './ReportActionButtons';
+
+export function CompanyLedgerView({ onBack }: { onBack?: () => void }) {
+  const { currentTenantId } = useAuth();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [startDate, setStartDate] = useState(new Date(new Date().setDate(1)).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
+  const [entries, setEntries] = useState<any[]>([]);
+  const [openingBalance, setOpeningBalance] = useState(0);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [currentTenantId]);
+
+  useEffect(() => {
+    if (selectedAccountId) fetchLedger();
+  }, [selectedAccountId, startDate, endDate]);
+
+  const fetchAccounts = async () => {
+    if (!currentTenantId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('chart_of_accounts')
+      .select('id, account_code, account_name, opening_balance, opening_balance_type')
+      .eq('tenant_id', currentTenantId)
+      .eq('is_active', true)
+      .order('account_code');
+    setAccounts(data || []);
+    if (data && data.length > 0 && !selectedAccountId) setSelectedAccountId(data[0].id);
+  };
+
+  const fetchLedger = async () => {
+    if (!currentTenantId || !selectedAccountId) return;
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    try {
+      const account = accounts.find((a: any) => a.id === selectedAccountId);
+      const baseOpening = account?.opening_balance_type === 'debit' ? (account.opening_balance || 0) : -(account?.opening_balance || 0);
+
+      const { data: priorLines } = await supabase
+        .from('journal_entry_lines')
+        .select('amount, dc_type, journal_entries!inner(entry_date, tenant_id)')
+        .eq('account_id', selectedAccountId)
+        .eq('journal_entries.tenant_id', currentTenantId)
+        .lt('journal_entries.entry_date', startDate);
+
+      let priorNet = 0;
+      (priorLines || []).forEach((l: any) => {
+        priorNet += l.dc_type === 'debit' ? l.amount : -l.amount;
+      });
+      setOpeningBalance(baseOpening + priorNet);
+
+      const { data: lines, error } = await supabase
+        .from('journal_entry_lines')
+        .select('*, journal_entries!inner(entry_number, entry_date, narration, tenant_id)')
+        .eq('account_id', selectedAccountId)
+        .eq('journal_entries.tenant_id', currentTenantId)
+        .gte('journal_entries.entry_date', startDate)
+        .lte('journal_entries.entry_date', endDate)
+        .order('journal_entries(entry_date)', { ascending: true });
+      if (error) throw error;
+      setEntries(lines || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch ledger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  let runningBalance = openingBalance;
+  const rowsWithBalance = entries.map((e: any) => {
+    runningBalance += e.dc_type === 'debit' ? e.amount : -e.amount;
+    return { ...e, balance: runningBalance };
+  });
+  const closingBalance = runningBalance;
+  const totalDebit = entries.filter((e: any) => e.dc_type === 'debit').reduce((s, e) => s + e.amount, 0);
+  const totalCredit = entries.filter((e: any) => e.dc_type === 'credit').reduce((s, e) => s + e.amount, 0);
+
+  const reportRows = rowsWithBalance.map((e: any) => ({
+    'Date': e.journal_entries?.entry_date || '',
+    'Voucher #': e.journal_entries?.entry_number || '',
+    'Narration': e.line_narration || e.journal_entries?.narration || '-',
+    'Debit': e.dc_type === 'debit' ? Number(e.amount) : 0,
+    'Credit': e.dc_type === 'credit' ? Number(e.amount) : 0,
+    'Balance': Number(e.balance)
+  }));
+
+  const reportColumns = [
+    { key: 'Date', label: 'Date' },
+    { key: 'Voucher #', label: 'Voucher #' },
+    { key: 'Narration', label: 'Narration' },
+    { key: 'Debit', label: 'Debit', align: 'right' as const },
+    { key: 'Credit', label: 'Credit', align: 'right' as const },
+    { key: 'Balance', label: 'Balance', align: 'right' as const }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        {onBack && (
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Company Ledger</h2>
+          <p className="text-slate-500 dark:text-slate-400">Account-wise transaction history with running balance.</p>
+        </div>
+        <ReportActionButtons
+          data={reportRows}
+          columns={reportColumns}
+          filename={`company_ledger_${startDate}_to_${endDate}`}
+          title="Company Ledger"
+          subtitle={`${startDate} to ${endDate}`}
+        />
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <CardContent className="p-4 flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[220px] space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Account</label>
+            <select value={selectedAccountId} onChange={e => setSelectedAccountId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 text-sm">
+              {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.account_code} - {a.account_name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Start Date</label>
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">End Date</label>
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <Button onClick={fetchLedger} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase">Opening Balance</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">₹{Math.abs(openingBalance).toLocaleString('en-IN')} {openingBalance >= 0 ? 'Dr' : 'Cr'}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase">Total Debit</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">₹{totalDebit.toLocaleString('en-IN')}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase">Total Credit</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">₹{totalCredit.toLocaleString('en-IN')}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-gradient-to-br from-primary/10 to-primary/5">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold text-slate-500 uppercase">Closing Balance</p>
+            <p className="text-xl font-bold text-primary mt-1">₹{Math.abs(closingBalance).toLocaleString('en-IN')} {closingBalance >= 0 ? 'Dr' : 'Cr'}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-none shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900 border-b">
+              <tr>
+                <th className="px-6 py-4 font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold">Voucher #</th>
+                <th className="px-6 py-4 font-semibold">Narration</th>
+                <th className="px-6 py-4 font-semibold text-right">Debit</th>
+                <th className="px-6 py-4 font-semibold text-right">Credit</th>
+                <th className="px-6 py-4 font-semibold text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">Loading ledger...</td></tr>
+              ) : rowsWithBalance.length === 0 ? (
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-500">No transactions found for this period.</td></tr>
+              ) : (
+                rowsWithBalance.map((e: any) => (
+                  <tr key={e.id} className="border-b hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{e.journal_entries?.entry_date}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
+                      <div className="flex items-center"><BookOpen className="h-4 w-4 mr-2 text-slate-400" />{e.journal_entries?.entry_number}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{e.line_narration || e.journal_entries?.narration || '-'}</td>
+                    <td className="px-6 py-4 text-right text-slate-700 dark:text-slate-300">{e.dc_type === 'debit' ? '₹' + e.amount.toLocaleString('en-IN') : '-'}</td>
+                    <td className="px-6 py-4 text-right text-slate-700 dark:text-slate-300">{e.dc_type === 'credit' ? '₹' + e.amount.toLocaleString('en-IN') : '-'}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-slate-100">₹{Math.abs(e.balance).toLocaleString('en-IN')} {e.balance >= 0 ? 'Dr' : 'Cr'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}

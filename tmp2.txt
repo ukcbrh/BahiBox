@@ -1,0 +1,131 @@
+                      )}
+                      <button
+                        onClick={() => setAssigningOrderId(null)}
+                        className="text-xs text-slate-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-3 h-8 text-xs"
+                      onClick={() => setAssigningOrderId(o.id)}
+                    >
+                      Assign Rider
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {readyToPackOrders.length === 0 && (
+              <p className="text-xs text-slate-400 py-4 text-center">
+                No orders waiting
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-bold text-sm text-slate-700 dark:text-slate-300 mb-3">
+            Dispatch ({dispatchAssignments.length})
+          </h3>
+          <div className="space-y-3">
+            {dispatchAssignments.map((o: any) => (
+              <Card key={o.id}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="font-bold text-slate-900 dark:text-slate-100">
+                      {o.customer_name}
+                    </p>
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                      DISPATCHED
+                    </span>
+                  </div>
+                  {o.assignment && (
+                    <>
+                      <p className="text-xs text-slate-500 mb-1">
+                        Assigned to {o.assignment.service_providers?.full_name}
+                      </p>
+                      {o.assignment.service_providers?.phone && (
+                        <a
+                          href={`tel:${o.assignment.service_providers.phone}`}
+                          className="text-xs text-blue-600 font-semibold underline"
+                        >
+                          📞 {o.assignment.service_providers.phone}
+                        </a>
+                      )}
+                      {o.assignment.pickup_otp &&
+                        o.assignment.status === "assigned" && (
+                          <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-700 uppercase">
+                              Pickup Code
+                            </span>
+                            <span className="text-lg font-extrabold text-amber-800 tracking-widest">
+                              {o.assignment.pickup_otp}
+                            </span>
+                          </div>
+                        )}
+                      {(o.assignment.status === "assigned" ||
+                        o.assignment.status === "picked_up") && (
+                        <div className="mt-3 -mx-4 -mb-4">
+                          <LiveTrackingMap
+                            deliveryAssignment={o.assignment}
+                            destinationAddress={
+                              o.assignment.status === "assigned"
+                                ? o.assignment.pickup_address
+                                : o.assignment.drop_address
+                            }
+                            statusText={
+                              o.assignment.status === "assigned"
+                                ? `${(o.assignment.service_providers?.full_name || "Rider").split(" ")[0]} is heading to pick up`
+                                : `${(o.assignment.service_providers?.full_name || "Rider").split(" ")[0]} is on the way`
+                            }
+                            compact={true}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+            {dispatchAssignments.length === 0 && (
+              <p className="text-xs text-slate-400 py-4 text-center">
+                No active deliveries
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 8. Purchase
+export const HospitalityPurchase = () => (
+  <div className="bg-white dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-8 text-center h-[60vh] flex flex-col items-center justify-center">
+    <Package size={48} className="text-primary mb-4" />
+    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+      Purchase & Inventory
+    </h2>
+    <p className="text-slate-500 dark:text-slate-400 max-w-md">
+      Master Setup, Purchase Orders, GRN, Stock Adjustment, and Supplier Ledger.
+    </p>
+  </div>
+);
+
+// 9. Payroll
+export const HospitalityPayroll = () => (
+  <div className="bg-white dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-8 text-center h-[60vh] flex flex-col items-center justify-center">
+    <Users size={48} className="text-primary mb-4" />
+    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">
+      Payroll & Duty Management
+    </h2>
+    <p className="text-slate-500 dark:text-slate-400 max-w-md">
+      Staff Master, Shift Roster, Biometric Attendance, and Salary Calculation.
+    </p>
+  </div>
+);
+
