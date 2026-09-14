@@ -889,6 +889,7 @@ export default function MerchantDashboard() {
 
 
   const activeStr = String(activeModuleState || '').toLowerCase();
+  const isRetailMode = activeStr.includes('retail') || isRetailMode || !activeModuleState;
   const isHotelMode = activeStr.includes('hotel') || activeStr.includes('hospitality') || activeStr.includes('restaurant');
   const isTransportMode = activeStr.includes('transport') || activeStr.includes('logistic') || activeStr.includes('fleet');
   const isManufacturingMode = activeStr.includes('manufacturing') || activeStr.includes('factory') || activeStr.includes('production');
@@ -944,12 +945,13 @@ export default function MerchantDashboard() {
               {/* Group items by module */}
               {(() => {
                 const effectiveModule = activeModuleState || tenant?.business_type || 'Retail POS';
+                const isRetailMode = effectiveModule.toLowerCase().includes('retail') || effectiveModule === 'Retail POS';
                 let activeMenuToRender = dynamicMenu.filter(m => m.module_name === effectiveModule || (effectiveModule === 'Retail POS' && m.module_name === 'Retail'));
                 console.log('DEBUG9:', JSON.stringify({effectiveModule, dynamicMenuLength: dynamicMenu.length, activeMenuToRenderLength: activeMenuToRender.length, dynamicMenuNames: dynamicMenu.map((m:any) => m.module_name)}));
                 
                 if (activeMenuToRender.length === 0) {
                   const em = effectiveModule as string;
-                  if (em === 'Retail POS' || em === 'Retail' || em === 'retail') {
+                  if (isRetailMode) {
                     activeMenuToRender = [
                      { module_id: '1', module_key: 'retail', module_name: 'Retail POS', module_icon: 'Store', module_order: 10, item_id: '99', item_key: 'retail.dashboard', item_label: 'Dashboard', item_icon: 'LayoutDashboard', route_path: '/merchant-dashboard', parent_item_id: null, item_order: 1 },
                      { module_id: '1', module_key: 'retail', module_name: 'Retail POS', module_icon: 'Store', module_order: 10, item_id: '100', item_key: 'retail.fullpos', item_label: 'Retail POS', item_icon: 'Monitor', route_path: '/merchant-dashboard/fullpos', parent_item_id: null, item_order: 5 },
@@ -1265,28 +1267,28 @@ export default function MerchantDashboard() {
 
         <div className={`flex-1 overflow-auto bg-slate-50 dark:bg-slate-900 ${activeTab === 'fullpos' ? '' : 'p-4 md:p-6 lg:p-8'}`}>
           {/* RETAIL POS */}
-          {activeTab === "dashboard" && activeModuleState === 'Retail POS' && <RetailDashboard setActiveTab={setActiveTab} />}
-        {activeTab === 'fullpos' && activeModuleState === 'Retail POS' && <RetailPOSFullScreen branchConfig={branchConfig} hideTabBar={true} />}
-        {activeTab === 'recent_sales' && activeModuleState === 'Retail POS' && <InvoiceHistory />}
-        {activeTab === 'staff_activity' && activeModuleState === 'Retail POS' && <StaffActivityView />}
-          {activeTab === 'usage_wallet' && activeModuleState === 'Retail POS' && <PlatformUsageWalletView />}
-        {activeTab === "online_orders" && activeModuleState === 'Retail POS' && <RetailOnlineOrdersPage />}
-        {activeTab === 'gate_keeper' && activeModuleState === 'Retail POS' && <GateKeeperView />}
-        {activeTab === 'inward_payment' && activeModuleState === 'Retail POS' && <InwardPaymentList />}
-        {activeTab === 'outward_payment' && activeModuleState === 'Retail POS' && <OutwardPaymentList />}
-        {activeTab === 'daily_expense' && activeModuleState === 'Retail POS' && <DailyExpensePage />}
-        {activeTab === 'other_income' && activeModuleState === 'Retail POS' && <OtherIncomePage />}
-        {activeTab === 'documents' && activeModuleState === 'Retail POS' && <DocumentsHub />}
-        {activeTab === 'picking_queue' && activeModuleState === 'Retail POS' && <PickingQueuePage />}
-        {activeTab === 'purchase_order' && activeModuleState === 'Retail POS' && <RetailPurchases />}
-        {activeTab === "scan_and_go_orders" && activeModuleState === 'Retail POS' && <RetailScanGoOrdersPage />}
-          {activeTab === "pos" && activeModuleState === 'Retail POS' && <SaleInvoices />}
-          {activeTab === "inventory" && activeModuleState === 'Retail POS' && <RetailProductsInventory />}          
-          {(activeTab === 'purchases' || activeTab === 'purchase') && activeModuleState === 'Retail POS' && <PurchaseInvoices />}
-          {(activeTab === 'parties' || activeTab === 'customers' || activeTab === 'suppliers') && activeModuleState === 'Retail POS' && <RetailCustomerSupplier />}
-          {activeTab === 'discounts' && activeModuleState === 'Retail POS' && <RetailDiscountsOffers />}
-          {activeTab === 'ledger' && activeModuleState === 'Retail POS' && <LedgerView />}
-          {(activeTab === "store_settings" || activeTab === "store-settings") && activeModuleState === "Retail POS" && <RetailStoreSettings onConfigChange={() => setConfigRefreshCounter(c => c + 1)} />}
+          {activeTab === "dashboard" && isRetailMode && <RetailDashboard setActiveTab={setActiveTab} />}
+        {activeTab === 'fullpos' && isRetailMode && <RetailPOSFullScreen branchConfig={branchConfig} hideTabBar={true} />}
+        {activeTab === 'recent_sales' && isRetailMode && <InvoiceHistory />}
+        {activeTab === 'staff_activity' && isRetailMode && <StaffActivityView />}
+          {activeTab === 'usage_wallet' && isRetailMode && <PlatformUsageWalletView />}
+        {activeTab === "online_orders" && isRetailMode && <RetailOnlineOrdersPage />}
+        {activeTab === 'gate_keeper' && isRetailMode && <GateKeeperView />}
+        {activeTab === 'inward_payment' && isRetailMode && <InwardPaymentList />}
+        {activeTab === 'outward_payment' && isRetailMode && <OutwardPaymentList />}
+        {activeTab === 'daily_expense' && isRetailMode && <DailyExpensePage />}
+        {activeTab === 'other_income' && isRetailMode && <OtherIncomePage />}
+        {activeTab === 'documents' && isRetailMode && <DocumentsHub />}
+        {activeTab === 'picking_queue' && isRetailMode && <PickingQueuePage />}
+        {activeTab === 'purchase_order' && isRetailMode && <RetailPurchases />}
+        {activeTab === "scan_and_go_orders" && isRetailMode && <RetailScanGoOrdersPage />}
+          {activeTab === "pos" && isRetailMode && <SaleInvoices />}
+          {activeTab === "inventory" && isRetailMode && <RetailProductsInventory />}          
+          {(activeTab === 'purchases' || activeTab === 'purchase') && isRetailMode && <PurchaseInvoices />}
+          {(activeTab === 'parties' || activeTab === 'customers' || activeTab === 'suppliers') && isRetailMode && <RetailCustomerSupplier />}
+          {activeTab === 'discounts' && isRetailMode && <RetailDiscountsOffers />}
+          {activeTab === 'ledger' && isRetailMode && <LedgerView />}
+          {(activeTab === "store_settings" || activeTab === "store-settings") && isRetailMode && <RetailStoreSettings onConfigChange={() => setConfigRefreshCounter(c => c + 1)} />}
 
 
           {/* HOSPITALITY */}
@@ -1373,7 +1375,7 @@ export default function MerchantDashboard() {
           {activeTab === 'agriculture_settings' && isAgricultureMode && <AgriculturePlaceholder title="Admin Settings" />}
 
           {/* HYBRID POS FALLBACK */}
-          {activeTab === "pos" && activeModuleState !== 'Retail POS' && !isHotelMode && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && (
+          {activeTab === "pos" && !isRetailMode && !isHotelMode && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && (
             <HybridPOSView 
               products={products} 
               setProducts={setProducts} 
@@ -1384,7 +1386,7 @@ export default function MerchantDashboard() {
           )}
 
           {/* SHARED / OTHER MODULES */}
-          {activeTab === "dashboard" && activeModuleState !== 'Retail POS' && !isHotelMode && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && <RetailDashboard setActiveTab={setActiveTab} />}
+          {activeTab === "dashboard" && !isRetailMode && !isHotelMode && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && <RetailDashboard setActiveTab={setActiveTab} />}
           {(activeTab === 'gst' || activeTab === "reports") && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && <ReportsHub />}
           {activeTab === 'crm' && <CRMView />}
           {activeTab === 'finance' && !isHotelMode && !isTransportMode && !isManufacturingMode && !isHealthcareMode && !isEducationMode && !isServicesMode && !isAgricultureMode && <FinanceDashboard />}
